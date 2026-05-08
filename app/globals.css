@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-inter: "Inter", sans-serif;
+  --font-be-vietnam: "Be Vietnam Pro", sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+}
+
+/* ─── Custom scrollbar ─────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-base-300 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-neutral;
+}
+
+/* ─── Match card hover effects ─────────────────── */
+.match-card {
+  @apply transition-all duration-200;
+}
+.match-card:hover {
+  @apply shadow-lg -translate-y-0.5;
+}
+
+/* ─── Prediction badge colors ──────────────────── */
+.badge-win {
+  @apply badge badge-success text-white text-xs font-semibold;
+}
+.badge-loss {
+  @apply badge badge-error text-white text-xs font-semibold;
+}
+.badge-pending {
+  @apply badge badge-warning text-white text-xs font-semibold;
+}
+
+/* ─── Form confidence indicators ───────────────── */
+.form-W { @apply bg-green-500 text-white; }
+.form-D { @apply bg-yellow-400 text-gray-800; }
+.form-L { @apply bg-red-500 text-white; }
+
+/* ─── League section divider ───────────────────── */
+.league-header {
+  @apply flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-content font-semibold text-sm;
+}
+
+/* ─── Odds cell ─────────────────────────────────── */
+.odds-cell {
+  @apply text-center px-2 py-1 rounded font-mono text-sm font-bold;
+}
+
+/* ─── Loading skeleton pulse ───────────────────── */
+.skeleton-pulse {
+  @apply animate-pulse bg-base-300 rounded;
+}
+
+/* ─── Mobile bottom nav ─────────────────────────── */
+@media (max-width: 768px) {
+  .mobile-bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around bg-base-100 border-t border-base-300 h-16;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* ─── Gradient hero ─────────────────────────────── */
+.hero-gradient {
+  background: linear-gradient(135deg, hsl(var(--p)) 0%, hsl(var(--s)) 100%);
+}
+
+/* ─── Sticky header blur ────────────────────────── */
+.navbar-sticky {
+  @apply sticky top-0 z-50 backdrop-blur-md bg-base-100/90 border-b border-base-300 shadow-sm;
+}

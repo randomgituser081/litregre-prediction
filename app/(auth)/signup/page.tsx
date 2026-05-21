@@ -10,8 +10,6 @@ import {
   Phone,
   Lock,
   Check,
-  Send,
-  Link2,
   AlertCircle,
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -35,7 +33,6 @@ function SignupContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [agreed, setAgreed] = useState(false);
-  const [sentLink, setSentLink] = useState("");
 
   const pinStrength = (() => {
     if (!pin) return 0;
@@ -63,7 +60,6 @@ function SignupContent() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    setSentLink("");
 
     const normalizedPhone = phone.replace(/\D/g, "");
 
@@ -96,6 +92,7 @@ function SignupContent() {
         body: JSON.stringify({
           phone: normalizedPhone,
           pin,
+          confirmPin,
           agreed,
         }),
       });
@@ -103,7 +100,6 @@ function SignupContent() {
       const data = (await response.json()) as {
         ok?: boolean;
         error?: string;
-        verificationLink?: string;
       };
 
       if (!response.ok || !data.ok) {
@@ -111,8 +107,8 @@ function SignupContent() {
         return;
       }
 
-      setSentLink(data.verificationLink ?? "");
-      toast.success("Registration started. Verification link sent.");
+      toast.success("Account created! You can now sign in.");
+      router.push(`/login?verified=1&phone=${encodeURIComponent(normalizedPhone)}`);
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -173,24 +169,6 @@ function SignupContent() {
             <div className="alert alert-error mb-4 py-2 text-sm">
               <AlertCircle size={14} />
               {error}
-            </div>
-          )}
-
-          {sentLink && (
-            <div className="alert alert-success mb-4 py-2 text-sm">
-              <div className="flex flex-col gap-2 w-full">
-                <div className="flex items-center gap-2">
-                  <Send size={14} />
-                  <span>Verification link generated and sent.</span>
-                </div>
-                <a
-                  href={sentLink}
-                  className="inline-flex items-center gap-1 text-primary underline break-all"
-                >
-                  <Link2 size={12} />
-                  Open verification link
-                </a>
-              </div>
             </div>
           )}
 

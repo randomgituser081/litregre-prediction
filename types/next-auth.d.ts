@@ -1,0 +1,31 @@
+import "next-auth";
+import "next-auth/jwt";
+
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id?: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      /** JWT access token from the prediction backend. */
+      backendToken?: string;
+    };
+  }
+
+  interface User {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    /** JWT access token from the prediction backend. */
+    backendToken?: string;
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id?: string;
+    /** JWT access token from the prediction backend. */
+    backendToken?: string;
+  }
+}

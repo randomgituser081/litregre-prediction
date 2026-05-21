@@ -1,9 +1,6 @@
 import CredentialsProvider from "next-auth/providers/credentials";
 import type { NextAuthOptions } from "next-auth";
-
-const MOCK_USERS = [
-  { id: "1", name: "Demo User", phone: "08012345678", pin: "1234", role: "premium" },
-];
+import { loginUser, extractToken } from "./predictionApi";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -16,27 +13,19 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.phone || !credentials?.pin) return null;
 
-        const normalizedPhone = credentials.phone.replace(/\D/g, "");
+        const number = credentials.phone.replace(/\D/g, "");
 
-        const user = MOCK_USERS.find((u) => u.phone === normalizedPhone);
-        if (user && credentials.pin === user.pin) {
-          return {
-            id: user.id,
-            name: user.name,
-            email: `${user.phone}@litregreprediction.local`,
-          };
-        }
+        const { ok, data } = await loginUser({ number, pin: credentials.pin });
+        if (!ok) return null;
 
-        // Allow any valid-looking credentials for demo
-        if (normalizedPhone.length >= 10 && credentials.pin.length >= 4) {
-          return {
-            id: Date.now().toString(),
-            name: `User ${normalizedPhone.slice(-4)}`,
-            email: `${normalizedPhone}@litregreprediction.local`,
-          };
-        }
+        const backendToken = extractToken(data) ?? undefined;
 
-        return null;
+        return {
+          id: number,
+          name: `User ${number.slice(-4)}`,
+          email: `${number}@litregreprediction.local`,
+          backendToken,
+        };
       },
     }),
   ],
@@ -47,12 +36,16 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.id = user.id;
+      if (user) {
+        token.id = user.id;
+        token.backendToken = user.backendToken;
+      }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as { id?: string }).id = token.id as string;
+        session.user.id = token.id;
+        session.user.backendToken = token.backendToken;
       }
       return session;
     },

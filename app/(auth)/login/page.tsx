@@ -68,14 +68,6 @@ function LoginContent() {
           </p>
         </div>
 
-        {/* Demo hint */}
-        <div className="alert alert-info mb-4 py-2">
-          <AlertCircle size={14} className="flex-shrink-0" />
-          <div className="text-xs">
-            <strong>Demo:</strong> Use any phone number (10+ digits) + PIN (4+ digits)
-          </div>
-        </div>
-
         {verified && (
           <div className="alert alert-success mb-4 py-2 text-sm">
             <AlertCircle size={14} />

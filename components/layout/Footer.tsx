@@ -1,81 +1,62 @@
 import Link from "next/link";
-import { Trophy, Twitter, Facebook, Instagram, Youtube, Mail } from "lucide-react";
+import { Trophy, Twitter, Facebook, Instagram, Youtube, ChevronRight } from "lucide-react";
 
 const FOOTER_PREDICTIONS = [
-  { label: "Today's Predictions", href: "/" },
+  { label: "General Predictions", href: "/" },
+  { label: "Today's Tips", href: "/predictions/today" },
+  { label: "VIP Predictions", href: "/predictions/vip" },
   { label: "Accumulator Tips", href: "/predictions/accumulator-tips" },
-  { label: "Correct Score", href: "/predictions/correct-score" },
-  { label: "Over 2.5 Goals", href: "/predictions/over-25-goals" },
-  { label: "Both Teams to Score", href: "/predictions/both-teams-to-score" },
-  { label: "Sure 2 Odd", href: "/predictions/sure-2-odd" },
-  { label: "Sure 3 Odd", href: "/predictions/sure-3-odd" },
-  { label: "Draw No Bet", href: "/predictions/dnb" },
+  { label: "Bet of the Day", href: "/predictions/bet-of-the-day" },
 ];
 
-const FOOTER_LEAGUES = [
-  { label: "Premier League", href: "/league/england-premier-league" },
-  { label: "La Liga", href: "/league/spain-la-liga" },
-  { label: "Champions League", href: "/league/uefa-champions-league" },
-  { label: "Serie A", href: "/league/italy-serie-a" },
-  { label: "Bundesliga", href: "/league/germany-bundesliga" },
-  { label: "Ligue 1", href: "/league/france-ligue-1" },
-  { label: "NPFL Nigeria", href: "/league/nigeria-npfl" },
-  { label: "CAF Champions League", href: "/league/caf-champions-league" },
+const FOOTER_LINKS = [
+  { label: "Privacy Policy", href: "/privacy-policy" },
+  { label: "Terms of Service", href: "/terms-of-service" },
+  { label: "Responsible Gambling", href: "/responsible-gambling" },
+  { label: "Contact", href: "/contact" },
+];
+
+const SOCIAL = [
+  { icon: <Twitter size={15} />, href: "#", label: "Twitter" },
+  { icon: <Facebook size={15} />, href: "#", label: "Facebook" },
+  { icon: <Instagram size={15} />, href: "#", label: "Instagram" },
+  { icon: <Youtube size={15} />, href: "#", label: "YouTube" },
 ];
 
 export default function Footer() {
   return (
-    <footer className="bg-neutral text-neutral-content">
-      {/* Top CTA */}
-      <div className="bg-primary py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h3 className="font-display text-xl font-bold text-white mb-2">
-            Never Miss a Prediction Again
-          </h3>
-          <p className="text-primary-content/80 text-sm mb-4">
-            Get daily predictions delivered to your inbox. Free forever.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-2 justify-center max-w-md mx-auto">
-            <input
-              type="email"
-              placeholder="Enter your email"
-              className="input input-sm bg-white text-gray-800 placeholder-gray-400 flex-1 border-0 focus:outline-none"
-            />
-            <button className="btn btn-sm bg-white text-primary hover:bg-primary-content border-0 font-semibold">
-              Subscribe Free
-            </button>
-          </div>
-        </div>
-      </div>
+    <footer className="bg-neutral text-neutral-content mt-8">
+      {/* Divider accent */}
+      <div className="h-1 bg-gradient-to-r from-primary via-amber-400 to-primary" />
 
-      {/* Main footer */}
+      {/* Main body */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
-          {/* Brand */}
-          <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <Trophy size={18} className="text-white" />
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-10">
+
+          {/* ── Brand col (wider) ── */}
+          <div className="md:col-span-5">
+            <Link href="/" className="inline-flex items-center gap-2.5 mb-4">
+              <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
+                <Trophy size={19} className="text-white" />
               </div>
-              <span className="font-display font-bold text-xl">
+              <span className="font-bold text-xl tracking-tight">
                 LitreGre<span className="text-amber-400"> Prediction</span>
               </span>
             </Link>
-            <p className="text-sm text-neutral-content/70 mb-4 leading-relaxed">
-              Free daily football predictions and analysis for all major leagues. We help you make smarter betting decisions.
+
+            <p className="text-sm text-neutral-content/60 leading-relaxed mb-5 max-w-xs">
+              Free daily football predictions. Sign up to unlock VIP tips,
+              accumulators and today&apos;s best picks — all in one place.
             </p>
-            <div className="flex gap-3">
-              {[
-                { icon: <Twitter size={16} />, href: "#", label: "Twitter" },
-                { icon: <Facebook size={16} />, href: "#", label: "Facebook" },
-                { icon: <Instagram size={16} />, href: "#", label: "Instagram" },
-                { icon: <Youtube size={16} />, href: "#", label: "YouTube" },
-              ].map((s) => (
+
+            {/* Social icons */}
+            <div className="flex gap-2">
+              {SOCIAL.map((s) => (
                 <a
                   key={s.label}
                   href={s.href}
                   aria-label={s.label}
-                  className="w-8 h-8 rounded-full bg-neutral-content/10 hover:bg-primary flex items-center justify-center transition-colors"
+                  className="w-8 h-8 rounded-lg bg-neutral-content/10 hover:bg-primary hover:text-white flex items-center justify-center transition-all hover:scale-110"
                 >
                   {s.icon}
                 </a>
@@ -83,18 +64,22 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Predictions */}
-          <div>
-            <h4 className="font-semibold text-sm uppercase tracking-wider mb-4 text-neutral-content/50">
+          {/* ── Predictions col ── */}
+          <div className="md:col-span-3">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-neutral-content/40 mb-4">
               Predictions
             </h4>
-            <ul className="space-y-2">
+            <ul className="space-y-2.5">
               {FOOTER_PREDICTIONS.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-neutral-content/70 hover:text-primary transition-colors"
+                    className="group flex items-center gap-1.5 text-sm text-neutral-content/65 hover:text-primary transition-colors"
                   >
+                    <ChevronRight
+                      size={12}
+                      className="text-neutral-content/30 group-hover:text-primary transition-colors flex-shrink-0"
+                    />
                     {link.label}
                   </Link>
                 </li>
@@ -102,23 +87,40 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Leagues */}
-          <div>
-            <h4 className="font-semibold text-sm uppercase tracking-wider mb-4 text-neutral-content/50">
-              Leagues
+          {/* ── Quick links col ── */}
+          <div className="md:col-span-4">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-neutral-content/40 mb-4">
+              Quick Links
             </h4>
-            <ul className="space-y-2">
-              {FOOTER_LEAGUES.map((link) => (
+            <ul className="space-y-2.5">
+              {FOOTER_LINKS.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-neutral-content/70 hover:text-primary transition-colors"
+                    className="group flex items-center gap-1.5 text-sm text-neutral-content/65 hover:text-primary transition-colors"
                   >
+                    <ChevronRight
+                      size={12}
+                      className="text-neutral-content/30 group-hover:text-primary transition-colors flex-shrink-0"
+                    />
                     {link.label}
                   </Link>
                 </li>
               ))}
             </ul>
+
+            {/* Sign up CTA */}
+            <div className="mt-6 p-3.5 rounded-xl bg-primary/10 border border-primary/20">
+              <p className="text-xs text-neutral-content/60 mb-2">
+                Get VIP predictions free
+              </p>
+              <Link
+                href="/signup?invite=1"
+                className="btn btn-primary btn-xs w-full"
+              >
+                Create Account
+              </Link>
+            </div>
           </div>
 
         </div>
@@ -126,18 +128,12 @@ export default function Footer() {
 
       {/* Bottom bar */}
       <div className="border-t border-neutral-content/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-neutral-content/50">
-            <p>© {new Date().getFullYear()} LitreGre Prediction. All rights reserved.</p>
-            <div className="flex gap-4">
-              <Link href="/privacy-policy" className="hover:text-primary transition-colors">Privacy Policy</Link>
-              <Link href="/terms-of-service" className="hover:text-primary transition-colors">Terms of Service</Link>
-              <Link href="/responsible-gambling" className="hover:text-primary transition-colors">Responsible Gambling</Link>
-              <Link href="/contact" className="hover:text-primary transition-colors">Contact</Link>
-            </div>
-          </div>
-          <p className="text-xs text-neutral-content/40 mt-2 text-center sm:text-left">
-            ⚠️ Disclaimer: All predictions are for informational and entertainment purposes only. Gambling involves risk. Please gamble responsibly. 18+.
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <p className="text-xs text-neutral-content/40">
+            © {new Date().getFullYear()} LitreGre Prediction. All rights reserved.
+          </p>
+          <p className="text-xs text-neutral-content/30 text-center sm:text-right max-w-md">
+            ⚠️ Predictions are for informational purposes only. Gamble responsibly. 18+.
           </p>
         </div>
       </div>

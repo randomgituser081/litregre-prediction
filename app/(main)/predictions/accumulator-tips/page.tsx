@@ -1,105 +1,208 @@
-import { ACCUMULATORS, BETTING_SITES } from "@/lib/mockData";
-import MatchCard from "@/components/predictions/MatchCard";
-import SafeImage from "@/components/ui/SafeImage";
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { Layers, Lock, ChevronDown, TrendingUp } from "lucide-react";
+import VIPPredictionCard, {
+  type VIPPrediction,
+} from "@/components/predictions/VIPPredictionCard";
+import { BETTING_SITES } from "@/lib/mockData";
 import BettingSiteWidget from "@/components/ads/BettingSiteWidget";
-import { Layers, TrendingUp } from "lucide-react";
-import type { Metadata } from "next";
-import clsx from "clsx";
 
-export const metadata: Metadata = {
-  title: "Accumulator Tips – Daily Football Accumulators",
-  description: "Free daily football accumulator tips with expert analysis. 5-folds, doubles, and trebles with the best odds.",
-};
+interface ApiResponse {
+  items: VIPPrediction[];
+  count: number;
+}
 
-const STATUS_CONFIG = {
-  pending: { label: "Pending", class: "badge-warning" },
-  won: { label: "Won ✓", class: "badge-success" },
-  lost: { label: "Lost ✗", class: "badge-error" },
-};
+const PAGE_SIZE = 20;
+
+function SkeletonCards({ count = 4 }: { count?: number }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          className="border border-base-300 rounded-xl p-4 animate-pulse space-y-3"
+        >
+          <div className="h-3 bg-base-300 rounded w-1/3" />
+          <div className="flex justify-between gap-4">
+            <div className="flex-1 h-8 bg-base-300 rounded" />
+            <div className="flex-1 h-8 bg-base-300 rounded" />
+          </div>
+          <div className="flex gap-3">
+            <div className="h-5 w-20 bg-base-300 rounded-full" />
+            <div className="h-5 w-12 bg-base-300 rounded-full" />
+            <div className="h-5 w-12 bg-base-300 rounded-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CombinedOddsBar({ items }: { items: VIPPrediction[] }) {
+  if (items.length === 0) return null;
+  const combined = items.reduce((acc, p) => acc * p.odds, 1);
+  return (
+    <div className="bg-gradient-to-r from-primary/10 to-blue-500/10 border border-primary/20 rounded-xl p-4 mb-5 flex flex-wrap items-center gap-4">
+      <div className="flex items-center gap-2">
+        <TrendingUp size={18} className="text-primary" />
+        <span className="font-bold text-sm">Combined Accumulator</span>
+      </div>
+      <div className="flex gap-4 ml-auto text-center">
+        <div>
+          <p className="text-[10px] text-base-content/50 uppercase">Selections</p>
+          <p className="font-bold text-lg">{items.length}</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-base-content/50 uppercase">Total Odds</p>
+          <p className="font-bold text-lg text-primary">{combined.toFixed(2)}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function AccumulatorPage() {
+  const { data: session, status } = useSession();
+  const isLoggedIn = status === "authenticated" && !!session?.user;
+
+  const [items, setItems] = useState<VIPPrediction[]>([]);
+  const [count, setCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const fetchPage = useCallback(async (p: number, append = false) => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(
+        `/api/predictions/accumulator?page=${p}&page_size=${PAGE_SIZE}`
+      );
+      if (res.status === 401) {
+        setError("session_expired");
+        return;
+      }
+      if (!res.ok) throw new Error();
+      const data = (await res.json()) as ApiResponse;
+      setCount(data.count ?? 0);
+      setItems((prev) =>
+        append ? [...prev, ...(data.items ?? [])] : (data.items ?? [])
+      );
+    } catch {
+      setError("Could not load accumulator tips. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isLoggedIn) fetchPage(1);
+  }, [isLoggedIn, fetchPage]);
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       {/* Hero */}
       <div className="bg-gradient-to-r from-primary to-blue-700 rounded-2xl p-6 mb-6 text-white">
         <div className="flex items-center gap-2 mb-2">
           <Layers size={22} />
-          <h1 className="font-display font-bold text-2xl">Accumulator Tips</h1>
+          <h1 className="font-bold text-2xl">Accumulator Tips</h1>
         </div>
         <p className="text-white/80 text-sm max-w-xl">
-          Daily expert accumulator tips with detailed analysis. We combine the best value picks across all major leagues.
+          Expert accumulator picks with odds and confidence ratings. Combine them
+          for maximum returns.
         </p>
+        {count > 0 && (
+          <span className="inline-block mt-3 bg-white/20 rounded-lg px-3 py-1 text-sm font-semibold">
+            {count} selections available
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Accumulators */}
-        <div className="lg:col-span-2 space-y-5">
-          {ACCUMULATORS.map((acc) => {
-            const status = STATUS_CONFIG[acc.status];
-            return (
-              <div key={acc.id} className="bg-base-100 border border-base-300 rounded-2xl overflow-hidden">
-                {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-b border-base-300">
-                  <div>
-                    <h2 className="font-bold text-base">{acc.title}</h2>
-                    <p className="text-xs text-base-content/60">{acc.date}</p>
-                  </div>
-                  <span className={`badge ${status.class}`}>{status.label}</span>
-                </div>
+        {/* Main content */}
+        <div className="lg:col-span-2">
+          {/* Session loading */}
+          {status === "loading" && <SkeletonCards />}
 
-                {/* Stats */}
-                <div className="grid grid-cols-3 divide-x divide-base-300 border-b border-base-300">
-                  <div className="text-center py-3">
-                    <p className="text-xs text-base-content/60">Total Odds</p>
-                    <p className="font-bold text-xl text-primary">{acc.totalOdds.toFixed(2)}</p>
-                  </div>
-                  <div className="text-center py-3">
-                    <p className="text-xs text-base-content/60">Selections</p>
-                    <p className="font-bold text-xl">{acc.matches.length}</p>
-                  </div>
-                  <div className="text-center py-3">
-                    <p className="text-xs text-base-content/60">Confidence</p>
-                    <p className="font-bold text-sm flex items-center justify-center gap-1">
-                      <TrendingUp size={13} className="text-warning" />
-                      {acc.confidence.charAt(0).toUpperCase() + acc.confidence.slice(1)}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Selections */}
-                <div className="divide-y divide-base-300">
-                  {acc.matches.map(({ match, pick, odds }) => (
-                    <Link
-                      key={match.id}
-                      href={`/predictions/match/${match.slug}`}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-base-200/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <SafeImage src={match.homeTeam.logo} alt="" className="w-5 h-5 object-contain" />
-                        <SafeImage src={match.awayTeam.logo} alt="" className="w-5 h-5 object-contain" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate">
-                          {match.homeTeam.name} vs {match.awayTeam.name}
-                        </p>
-                        <p className="text-xs text-primary">{pick}</p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="font-bold text-sm">{odds}</p>
-                        <p className="text-[10px] text-base-content/50">{match.time}</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-
-                {/* Analysis */}
-                <div className="px-4 py-3 bg-base-200/50 border-t border-base-300">
-                  <p className="text-xs text-base-content/70 leading-relaxed">{acc.analysis}</p>
-                </div>
+          {/* Not logged in */}
+          {status !== "loading" && !isLoggedIn && (
+            <div className="bg-base-100 border border-base-300 rounded-2xl flex flex-col items-center justify-center py-16 px-6 text-center">
+              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <Lock size={24} className="text-primary" />
               </div>
-            );
-          })}
+              <h2 className="font-bold text-lg mb-2">Members Only</h2>
+              <p className="text-sm text-base-content/55 max-w-sm mb-5">
+                Accumulator tips are available to registered users. Sign in to
+                access today&apos;s selections and combined odds.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Link href="/login?callbackUrl=/predictions/accumulator-tips" className="btn btn-primary">
+                  Sign In
+                </Link>
+                <Link href="/signup?invite=1" className="btn btn-outline btn-primary">
+                  Create Account
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Logged in */}
+          {isLoggedIn && (
+            <>
+              {loading && items.length === 0 && <SkeletonCards />}
+
+              {error && error !== "session_expired" && (
+                <div className="bg-base-100 border border-base-300 rounded-xl p-6 text-center">
+                  <p className="text-sm text-error mb-3">{error}</p>
+                  <button onClick={() => fetchPage(1)} className="btn btn-sm btn-outline btn-primary">
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {error === "session_expired" && (
+                <div className="bg-base-100 border border-base-300 rounded-xl p-6 text-center">
+                  <p className="text-sm text-error mb-3">Your session expired. Please sign in again.</p>
+                  <Link href="/login?callbackUrl=/predictions/accumulator-tips" className="btn btn-sm btn-primary">
+                    Sign In Again
+                  </Link>
+                </div>
+              )}
+
+              {!loading && !error && items.length === 0 && (
+                <div className="bg-base-100 border border-base-300 rounded-2xl py-14 text-center">
+                  <p className="text-3xl mb-2">🎲</p>
+                  <p className="font-semibold">No accumulator tips yet</p>
+                  <p className="text-xs text-base-content/50 mt-1">Check back later</p>
+                </div>
+              )}
+
+              {items.length > 0 && (
+                <>
+                  <CombinedOddsBar items={items} />
+                  {items.map((p) => (
+                    <VIPPredictionCard key={p.match_id} prediction={p} />
+                  ))}
+                </>
+              )}
+
+              {items.length < count && (
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={() => { const next = page + 1; setPage(next); fetchPage(next, true); }}
+                    disabled={loading}
+                    className="btn btn-sm btn-outline btn-primary gap-2"
+                  >
+                    {loading ? <span className="loading loading-spinner loading-xs" /> : <ChevronDown size={14} />}
+                    Load more
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         {/* Sidebar */}
@@ -109,12 +212,12 @@ export default function AccumulatorPage() {
             <ul className="space-y-2 text-xs text-base-content/70">
               {[
                 "Never bet your entire bankroll on an accumulator",
-                "Accas have lower probability — they're high-risk, high-reward",
                 "3 to 5 selections give the best balance of odds and probability",
-                "Consider each-way cash-out options to lock in profit early",
+                "High odds accas are high-risk — stake responsibly",
+                "Consider cash-out options to lock in profit early",
               ].map((tip) => (
                 <li key={tip} className="flex items-start gap-1.5">
-                  <span className="text-primary">•</span>
+                  <span className="text-primary mt-0.5">•</span>
                   {tip}
                 </li>
               ))}

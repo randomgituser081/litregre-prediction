@@ -1,19 +1,23 @@
 import { NextResponse } from "next/server";
+import { createUser, extractError } from "@/lib/predictionApi";
 
-type RegisterBody = {
+interface RegisterBody {
   phone?: string;
   pin?: string;
+  confirmPin?: string;
   agreed?: boolean;
-};
+}
 
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as RegisterBody;
-    const phone = (body.phone ?? "").replace(/\D/g, "");
+    const number = (body.phone ?? "").replace(/\D/g, "");
     const pin = body.pin ?? "";
+    const confirmPin = body.confirmPin ?? "";
     const agreed = Boolean(body.agreed);
 
-    if (phone.length < 10) {
+    // Client-side mirrors these too, but validate server-side as well
+    if (number.length < 10) {
       return NextResponse.json(
         { ok: false, error: "Invalid phone number." },
         { status: 400 }
@@ -27,29 +31,41 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!agreed) {
+    if (pin !== confirmPin) {
       return NextResponse.json(
-        { ok: false, error: "You must agree to terms before registering." },
+        { ok: false, error: "PINs do not match." },
         { status: 400 }
       );
     }
 
-    const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
-    const token = Buffer.from(`${phone}:${Date.now()}`).toString("base64url");
+    if (!agreed) {
+      return NextResponse.json(
+        { ok: false, error: "You must agree to the terms before registering." },
+        { status: 400 }
+      );
+    }
 
-    // Phone number is intentionally attached to the endpoint URL
-    // so your backend can extract it directly from query params.
-    const verificationLink = `${baseUrl}/api/auth/complete-registration?phone=${encodeURIComponent(phone)}&token=${encodeURIComponent(token)}`;
+    const result = await createUser({
+      number,
+      pin,
+      confirm_pin: confirmPin,
+    });
+
+    if (!result.ok) {
+      return NextResponse.json(
+        { ok: false, error: extractError(result.data) },
+        { status: result.status }
+      );
+    }
 
     return NextResponse.json({
       ok: true,
-      message: "Registration started. Verification link sent.",
-      verificationLink,
+      message: "Account created successfully. You can now sign in.",
     });
   } catch {
     return NextResponse.json(
-      { ok: false, error: "Invalid request body." },
-      { status: 400 }
+      { ok: false, error: "Network error. Please try again." },
+      { status: 500 }
     );
   }
 }

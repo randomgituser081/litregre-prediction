@@ -3,10 +3,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { Crown, Lock, ChevronDown } from "lucide-react";
+import { Crown, Lock } from "lucide-react";
 import VIPPredictionCard, {
   type VIPPrediction,
 } from "@/components/predictions/VIPPredictionCard";
+import Pagination from "@/components/ui/Pagination";
 
 interface ApiResponse {
   items: VIPPrediction[];
@@ -46,7 +47,9 @@ export default function VIPPredictionsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const fetchPage = useCallback(async (p: number, append = false) => {
+  const totalPages = Math.ceil(count / PAGE_SIZE) || 1;
+
+  const fetchPage = useCallback(async (p: number) => {
     setLoading(true);
     setError("");
     try {
@@ -60,15 +63,19 @@ export default function VIPPredictionsPage() {
       if (!res.ok) throw new Error();
       const data = (await res.json()) as ApiResponse;
       setCount(data.count ?? 0);
-      setItems((prev) =>
-        append ? [...prev, ...(data.items ?? [])] : (data.items ?? [])
-      );
+      setItems(data.items ?? []);
     } catch {
       setError("Could not load VIP predictions. Please try again.");
     } finally {
       setLoading(false);
     }
   }, []);
+
+  function handlePageChange(p: number) {
+    setPage(p);
+    fetchPage(p);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   useEffect(() => {
     if (isLoggedIn) fetchPage(1);
@@ -149,22 +156,18 @@ export default function VIPPredictionsPage() {
           )}
 
           <div className="space-y-0">
-            {items.map((p) => (
+            {!loading && items.map((p) => (
               <VIPPredictionCard key={p.match_id} prediction={p} />
             ))}
           </div>
 
-          {items.length < count && (
-            <div className="mt-4 text-center">
-              <button
-                onClick={() => { const next = page + 1; setPage(next); fetchPage(next, true); }}
-                disabled={loading}
-                className="btn btn-sm btn-outline btn-primary gap-2"
-              >
-                {loading ? <span className="loading loading-spinner loading-xs" /> : <ChevronDown size={14} />}
-                Load more ({items.length}/{count})
-              </button>
-            </div>
+          {!error && (
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              loading={loading}
+            />
           )}
         </>
       )}

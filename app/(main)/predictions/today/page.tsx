@@ -4,11 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CalendarDays, ChevronDown, Lock } from "lucide-react";
+import { CalendarDays, Lock } from "lucide-react";
 import dayjs from "dayjs";
 import GeneralPredictionCard, {
   type GeneralPrediction,
 } from "@/components/predictions/GeneralPredictionCard";
+import Pagination from "@/components/ui/Pagination";
 
 interface ApiResponse {
   items: GeneralPrediction[];
@@ -47,7 +48,9 @@ export default function TodayPredictionsPage() {
 
   const isLoggedIn = status === "authenticated" && !!session?.user;
 
-  const fetchPage = useCallback(async (p: number, append = false) => {
+  const totalPages = Math.ceil(count / PAGE_SIZE) || 1;
+
+  const fetchPage = useCallback(async (p: number) => {
     setLoading(true);
     setError("");
     try {
@@ -61,9 +64,7 @@ export default function TodayPredictionsPage() {
       if (!res.ok) throw new Error("Failed to load.");
       const data = (await res.json()) as ApiResponse;
       setCount(data.count ?? 0);
-      setItems((prev) =>
-        append ? [...prev, ...(data.items ?? [])] : (data.items ?? [])
-      );
+      setItems(data.items ?? []);
     } catch {
       setError("Could not load today's predictions. Please try again.");
     } finally {
@@ -75,10 +76,10 @@ export default function TodayPredictionsPage() {
     if (isLoggedIn) fetchPage(1);
   }, [isLoggedIn, fetchPage]);
 
-  function handleLoadMore() {
-    const next = page + 1;
-    setPage(next);
-    fetchPage(next, true);
+  function handlePageChange(p: number) {
+    setPage(p);
+    fetchPage(p);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   return (
@@ -153,25 +154,18 @@ export default function TodayPredictionsPage() {
         )}
 
         {/* Predictions list */}
-        {items.map((p) => (
+        {!loading && items.map((p) => (
           <GeneralPredictionCard key={p.game_id} prediction={p} />
         ))}
 
-        {/* Load more */}
-        {items.length < count && (
-          <div className="p-3 border-t border-base-300 text-center">
-            <button
-              onClick={handleLoadMore}
-              disabled={loading}
-              className="btn btn-sm btn-outline btn-primary gap-2"
-            >
-              {loading ? (
-                <span className="loading loading-spinner loading-xs" />
-              ) : (
-                <ChevronDown size={14} />
-              )}
-              Load more ({items.length}/{count})
-            </button>
+        {!error && (
+          <div className="border-t border-base-300">
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              loading={loading}
+            />
           </div>
         )}
       </div>

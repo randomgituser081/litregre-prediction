@@ -3,16 +3,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { Trophy, Lock, ChevronDown, Crown } from "lucide-react";
+import { Trophy, Lock, Crown } from "lucide-react";
 import PredictionOfTheDay from "@/components/home/PredictionOfTheDay";
-import BettingSiteWidget from "@/components/ads/BettingSiteWidget";
 import GeneralPredictionCard, {
   type GeneralPrediction,
 } from "@/components/predictions/GeneralPredictionCard";
 import VIPPredictionCard, {
   type VIPPrediction,
 } from "@/components/predictions/VIPPredictionCard";
-import { BETTING_SITES } from "@/lib/mockData";
+import Pagination from "@/components/ui/Pagination";
 
 type Tab = "general" | "vip";
 
@@ -82,8 +81,11 @@ export default function HomePage() {
   const [vipLoading, setVipLoading] = useState(false);
   const [vipError, setVipError] = useState("");
 
+  const generalTotalPages = Math.ceil(generalCount / PAGE_SIZE) || 1;
+  const vipTotalPages = Math.ceil(vipCount / PAGE_SIZE) || 1;
+
   // ── Fetch general ──────────────────────────────────────────────────────────
-  const fetchGeneral = useCallback(async (page: number, append = false) => {
+  const fetchGeneral = useCallback(async (page: number) => {
     setGeneralLoading(true);
     setGeneralError("");
     try {
@@ -93,9 +95,7 @@ export default function HomePage() {
       const data = (await res.json()) as PaginatedResponse<GeneralPrediction>;
       if (!res.ok) throw new Error("Failed to load predictions.");
       setGeneralCount(data.count ?? 0);
-      setGeneralItems((prev) =>
-        append ? [...prev, ...(data.items ?? [])] : (data.items ?? [])
-      );
+      setGeneralItems(data.items ?? []);
     } catch {
       setGeneralError("Could not load predictions. Please try again.");
     } finally {
@@ -104,7 +104,7 @@ export default function HomePage() {
   }, []);
 
   // ── Fetch VIP ──────────────────────────────────────────────────────────────
-  const fetchVIP = useCallback(async (page: number, append = false) => {
+  const fetchVIP = useCallback(async (page: number) => {
     setVipLoading(true);
     setVipError("");
     try {
@@ -113,15 +113,12 @@ export default function HomePage() {
       );
       const data = (await res.json()) as PaginatedResponse<VIPPrediction>;
       if (res.status === 401) {
-        // session expired or token invalid
         setVipError("Session expired. Please sign in again.");
         return;
       }
       if (!res.ok) throw new Error("Failed to load VIP predictions.");
       setVipCount(data.count ?? 0);
-      setVipItems((prev) =>
-        append ? [...prev, ...(data.items ?? [])] : (data.items ?? [])
-      );
+      setVipItems(data.items ?? []);
     } catch {
       setVipError("Could not load VIP predictions. Please try again.");
     } finally {
@@ -129,28 +126,26 @@ export default function HomePage() {
     }
   }, []);
 
-  // Load general on mount
   useEffect(() => {
     fetchGeneral(1);
   }, [fetchGeneral]);
 
-  // Load VIP when tab switches to vip and user is logged in
   useEffect(() => {
     if (activeTab === "vip" && session?.user && vipItems.length === 0) {
       fetchVIP(1);
     }
   }, [activeTab, session, fetchVIP, vipItems.length]);
 
-  function handleLoadMoreGeneral() {
-    const next = generalPage + 1;
-    setGeneralPage(next);
-    fetchGeneral(next, true);
+  function handleGeneralPageChange(page: number) {
+    setGeneralPage(page);
+    fetchGeneral(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function handleLoadMoreVIP() {
-    const next = vipPage + 1;
-    setVipPage(next);
-    fetchVIP(next, true);
+  function handleVIPPageChange(page: number) {
+    setVipPage(page);
+    fetchVIP(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   const isLoggedIn = authStatus === "authenticated" && !!session?.user;
@@ -225,15 +220,13 @@ export default function HomePage() {
                 )}
               </div>
 
-              {generalLoading && generalItems.length === 0 && (
-                <SkeletonRows count={8} />
-              )}
+              {generalLoading && <SkeletonRows count={8} />}
 
               {generalError && (
                 <div className="p-6 text-center">
                   <p className="text-sm text-error mb-3">{generalError}</p>
                   <button
-                    onClick={() => fetchGeneral(1)}
+                    onClick={() => fetchGeneral(generalPage)}
                     className="btn btn-sm btn-outline btn-primary"
                   >
                     Retry
@@ -249,25 +242,18 @@ export default function HomePage() {
                 </div>
               )}
 
-              {generalItems.map((p) => (
+              {!generalLoading && generalItems.map((p) => (
                 <GeneralPredictionCard key={p.game_id} prediction={p} />
               ))}
 
-              {/* Load more */}
-              {generalItems.length < generalCount && (
-                <div className="p-3 border-t border-base-300 text-center">
-                  <button
-                    onClick={handleLoadMoreGeneral}
-                    disabled={generalLoading}
-                    className="btn btn-sm btn-outline btn-primary gap-2"
-                  >
-                    {generalLoading ? (
-                      <span className="loading loading-spinner loading-xs" />
-                    ) : (
-                      <ChevronDown size={14} />
-                    )}
-                    Load more
-                  </button>
+              {!generalError && (
+                <div className="border-t border-base-300">
+                  <Pagination
+                    currentPage={generalPage}
+                    totalPages={generalTotalPages}
+                    onPageChange={handleGeneralPageChange}
+                    loading={generalLoading}
+                  />
                 </div>
               )}
             </div>
@@ -295,13 +281,13 @@ export default function HomePage() {
               {/* Logged in */}
               {isLoggedIn && (
                 <>
-                  {vipLoading && vipItems.length === 0 && <SkeletonRows count={4} />}
+                  {vipLoading && <SkeletonRows count={4} />}
 
                   {vipError && (
                     <div className="p-6 text-center">
                       <p className="text-sm text-error mb-3">{vipError}</p>
                       <button
-                        onClick={() => fetchVIP(1)}
+                        onClick={() => fetchVIP(vipPage)}
                         className="btn btn-sm btn-outline btn-primary"
                       >
                         Retry
@@ -318,26 +304,19 @@ export default function HomePage() {
                   )}
 
                   <div className="p-3">
-                    {vipItems.map((p) => (
+                    {!vipLoading && vipItems.map((p) => (
                       <VIPPredictionCard key={p.match_id} prediction={p} />
                     ))}
                   </div>
 
-                  {/* Load more */}
-                  {vipItems.length < vipCount && (
-                    <div className="p-3 border-t border-base-300 text-center">
-                      <button
-                        onClick={handleLoadMoreVIP}
-                        disabled={vipLoading}
-                        className="btn btn-sm btn-outline btn-primary gap-2"
-                      >
-                        {vipLoading ? (
-                          <span className="loading loading-spinner loading-xs" />
-                        ) : (
-                          <ChevronDown size={14} />
-                        )}
-                        Load more
-                      </button>
+                  {!vipError && (
+                    <div className="border-t border-base-300">
+                      <Pagination
+                        currentPage={vipPage}
+                        totalPages={vipTotalPages}
+                        onPageChange={handleVIPPageChange}
+                        loading={vipLoading}
+                      />
                     </div>
                   )}
                 </>
@@ -349,17 +328,6 @@ export default function HomePage() {
         {/* ── Sidebar ── */}
         <aside className="w-full lg:w-72 xl:w-80 flex-shrink-0 order-1 lg:order-2 space-y-4">
           <PredictionOfTheDay />
-
-          <div className="bg-base-100 border border-base-300 rounded-xl overflow-hidden">
-            <div className="bg-primary text-primary-content px-4 py-2.5 font-bold text-sm">
-              ⭐ Top Betting Sites
-            </div>
-            <div className="p-3 space-y-2">
-              {BETTING_SITES.slice(0, 5).map((site) => (
-                <BettingSiteWidget key={site.id} site={site} variant="compact" />
-              ))}
-            </div>
-          </div>
         </aside>
       </div>
     </div>

@@ -3,10 +3,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { Layers, Lock, ChevronDown, TrendingUp } from "lucide-react";
+import { Layers, Lock, TrendingUp } from "lucide-react";
 import VIPPredictionCard, {
   type VIPPrediction,
 } from "@/components/predictions/VIPPredictionCard";
+import Pagination from "@/components/ui/Pagination";
 import { BETTING_SITES } from "@/lib/mockData";
 import BettingSiteWidget from "@/components/ads/BettingSiteWidget";
 
@@ -74,7 +75,9 @@ export default function AccumulatorPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const fetchPage = useCallback(async (p: number, append = false) => {
+  const totalPages = Math.ceil(count / PAGE_SIZE) || 1;
+
+  const fetchPage = useCallback(async (p: number) => {
     setLoading(true);
     setError("");
     try {
@@ -88,15 +91,19 @@ export default function AccumulatorPage() {
       if (!res.ok) throw new Error();
       const data = (await res.json()) as ApiResponse;
       setCount(data.count ?? 0);
-      setItems((prev) =>
-        append ? [...prev, ...(data.items ?? [])] : (data.items ?? [])
-      );
+      setItems(data.items ?? []);
     } catch {
       setError("Could not load accumulator tips. Please try again.");
     } finally {
       setLoading(false);
     }
   }, []);
+
+  function handlePageChange(p: number) {
+    setPage(p);
+    fetchPage(p);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   useEffect(() => {
     if (isLoggedIn) fetchPage(1);
@@ -180,7 +187,7 @@ export default function AccumulatorPage() {
                 </div>
               )}
 
-              {items.length > 0 && (
+              {!loading && items.length > 0 && (
                 <>
                   <CombinedOddsBar items={items} />
                   {items.map((p) => (
@@ -189,17 +196,13 @@ export default function AccumulatorPage() {
                 </>
               )}
 
-              {items.length < count && (
-                <div className="mt-4 text-center">
-                  <button
-                    onClick={() => { const next = page + 1; setPage(next); fetchPage(next, true); }}
-                    disabled={loading}
-                    className="btn btn-sm btn-outline btn-primary gap-2"
-                  >
-                    {loading ? <span className="loading loading-spinner loading-xs" /> : <ChevronDown size={14} />}
-                    Load more
-                  </button>
-                </div>
+              {!error && (
+                <Pagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                  loading={loading}
+                />
               )}
             </>
           )}

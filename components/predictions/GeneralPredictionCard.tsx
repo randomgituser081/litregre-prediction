@@ -15,7 +15,7 @@ export interface GeneralPrediction {
 }
 
 function ConfidenceBadge({ probability }: { probability: number }) {
-  // Backend returns whole numbers (e.g. 42 = 42%), not decimals (0.42)
+  // Backend returns whole numbers (e.g. 42 = 42%), not decimals
   const pct = probability > 1 ? Math.round(probability) : Math.round(probability * 100);
   const norm = probability > 1 ? probability / 100 : probability;
   const cls =
@@ -45,49 +45,58 @@ interface Props {
 export default function GeneralPredictionCard({ prediction }: Props) {
   const kickoff = dayjs(prediction.date);
   const timeStr = kickoff.isValid() ? kickoff.format("HH:mm") : "--:--";
+  const dateStr = kickoff.isValid() ? kickoff.format("MMM D") : "";
 
   return (
     <div className="border-b border-base-300 last:border-0 hover:bg-base-200/40 transition-colors">
-      <div className="flex items-center gap-2 px-3 py-3">
-        {/* Time */}
-        <div className="w-11 flex-shrink-0 text-center">
-          <span className="text-xs font-semibold text-base-content/60">{timeStr}</span>
-        </div>
-
-        {/* Teams */}
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold truncate">{prediction.home_team}</p>
-          <p className="text-xs text-base-content/60 truncate">{prediction.away_team}</p>
-          {prediction.result_score && (
-            <p className="text-[10px] font-bold text-primary mt-0.5">
-              Score: {prediction.result_score}
-            </p>
-          )}
-        </div>
-
-        {/* Prediction label */}
-        <div className="hidden sm:block flex-shrink-0 text-right mr-1">
-          <p className="text-[10px] text-base-content/40 uppercase tracking-wide">Tip</p>
-          <p className="text-xs font-bold text-primary leading-tight max-w-[88px] text-right">
-            {prediction.prediction}
+      {/* Top row: kickoff + teams horizontally + status */}
+      <div className="flex items-center gap-2 sm:gap-3 px-3 py-3">
+        {/* Date / time */}
+        <div className="w-14 flex-shrink-0 text-center">
+          <p className="text-[10px] text-base-content/50 leading-tight">{dateStr}</p>
+          <p className="text-xs font-semibold text-base-content/70 leading-tight">
+            {timeStr}
           </p>
         </div>
 
-        {/* Probability */}
-        <div className="flex-shrink-0">
-          <ConfidenceBadge probability={prediction.prediction_probability} />
+        {/* Teams: home LEFT, away RIGHT */}
+        <div className="flex-1 min-w-0 flex items-center gap-1.5 sm:gap-2">
+          <p className="text-xs font-bold truncate flex-1 text-right">
+            {prediction.home_team}
+          </p>
+          <span className="text-[10px] font-bold text-base-content/30 flex-shrink-0">
+            vs
+          </span>
+          <p className="text-xs font-bold truncate flex-1 text-left">
+            {prediction.away_team}
+          </p>
         </div>
 
         {/* Status */}
-        <div className="flex-shrink-0 w-16 text-right">
+        <div className="flex-shrink-0">
           <StatusBadge prediction={prediction} />
         </div>
       </div>
 
-      {/* Mobile: show prediction label below */}
-      <div className="sm:hidden px-3 pb-2 flex items-center gap-2">
-        <span className="text-[10px] text-base-content/40 uppercase tracking-wide">Tip:</span>
-        <span className="text-xs font-bold text-primary">{prediction.prediction}</span>
+      {/* Bottom row: tip + confidence + (score if finished) */}
+      <div className="px-3 pb-2.5 flex items-center gap-2 pl-[68px] sm:pl-[72px]">
+        <span className="text-[10px] text-base-content/40 uppercase tracking-wide">
+          Tip
+        </span>
+        <span className="badge badge-primary badge-sm font-bold">
+          {prediction.prediction}
+        </span>
+
+        <span className="text-[10px] text-base-content/40 uppercase tracking-wide ml-1">
+          Conf
+        </span>
+        <ConfidenceBadge probability={prediction.prediction_probability} />
+
+        {prediction.result_score && (
+          <span className="ml-auto text-[11px] font-bold text-primary">
+            {prediction.result_score}
+          </span>
+        )}
       </div>
     </div>
   );

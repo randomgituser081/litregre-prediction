@@ -27,9 +27,10 @@ const NAV_LINKS = [
     href: "/predictions",
     icon: <Trophy size={16} />,
     children: [
-      { label: "General Predictions", href: "/predictions" },
+      { label: "All Predictions", href: "/predictions/all" },
       { label: "Today's Tips", href: "/predictions/today" },
       { label: "VIP Predictions", href: "/predictions/vip" },
+      { label: "Past Results", href: "/predictions/all?tab=past" },
     ],
   },
   {

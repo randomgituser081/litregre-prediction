@@ -17,9 +17,11 @@ export async function GET(req: Request) {
 
   const page = searchParams.get("page");
   const pageSize = searchParams.get("page_size");
+  const search = searchParams.get("search");
 
   if (page) params.set("page", page);
   if (pageSize) params.set("page_size", pageSize);
+  if (search) params.set("search", search);
 
   try {
     const res = await fetch(

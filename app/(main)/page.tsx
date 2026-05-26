@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Trophy, Lock, Crown } from "lucide-react";
 import PredictionOfTheDay from "@/components/home/PredictionOfTheDay";
+import PastPredictionsList from "@/components/home/PastPredictionsList";
 import GeneralPredictionCard, {
   type GeneralPrediction,
 } from "@/components/predictions/GeneralPredictionCard";
@@ -12,6 +13,7 @@ import VIPPredictionCard, {
   type VIPPrediction,
 } from "@/components/predictions/VIPPredictionCard";
 import Pagination from "@/components/ui/Pagination";
+import SearchBar from "@/components/ui/SearchBar";
 
 type Tab = "general" | "vip";
 
@@ -40,20 +42,20 @@ function SkeletonRows({ count = 6 }: { count?: number }) {
   );
 }
 
-function VIPLockScreen() {
+function AuthLockScreen({ title, message, callbackUrl }: { title: string; message: string; callbackUrl?: string }) {
+  const loginHref = callbackUrl ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/login";
   return (
     <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
       <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
         <Lock size={28} className="text-primary" />
       </div>
-      <h3 className="font-bold text-lg mb-2">VIP Predictions</h3>
+      <h3 className="font-bold text-lg mb-2">{title}</h3>
       <p className="text-sm text-base-content/60 max-w-sm mb-6">
-        VIP predictions include team logos, competition details, accurate odds
-        and higher-confidence tips. Sign in to unlock access.
+        {message}
       </p>
       <div className="flex flex-col sm:flex-row gap-3">
-        <Link href="/login" className="btn btn-primary">
-          Sign In to Access VIP
+        <Link href={loginHref} className="btn btn-primary">
+          Sign In
         </Link>
         <Link href="/signup?invite=1" className="btn btn-outline btn-primary">
           Create Account
@@ -67,50 +69,64 @@ export default function HomePage() {
   const { data: session, status: authStatus } = useSession();
   const [activeTab, setActiveTab] = useState<Tab>("general");
 
-  // ── General predictions state ──────────────────────────────────────────────
-  const [generalItems, setGeneralItems] = useState<GeneralPrediction[]>([]);
-  const [generalCount, setGeneralCount] = useState(0);
-  const [generalPage, setGeneralPage] = useState(1);
-  const [generalLoading, setGeneralLoading] = useState(false);
-  const [generalError, setGeneralError] = useState("");
+  // ── Today predictions (General tab) ────────────────────────────────────────
+  const [todayItems, setTodayItems] = useState<GeneralPrediction[]>([]);
+  const [todayCount, setTodayCount] = useState(0);
+  const [todayPage, setTodayPage] = useState(1);
+  const [todayLoading, setTodayLoading] = useState(false);
+  const [todayError, setTodayError] = useState("");
+  const [todaySearch, setTodaySearch] = useState("");
 
-  // ── VIP predictions state ──────────────────────────────────────────────────
+  // ── VIP predictions ────────────────────────────────────────────────────────
   const [vipItems, setVipItems] = useState<VIPPrediction[]>([]);
   const [vipCount, setVipCount] = useState(0);
   const [vipPage, setVipPage] = useState(1);
   const [vipLoading, setVipLoading] = useState(false);
   const [vipError, setVipError] = useState("");
+  const [vipSearch, setVipSearch] = useState("");
 
-  const generalTotalPages = Math.ceil(generalCount / PAGE_SIZE) || 1;
+  const todayTotalPages = Math.ceil(todayCount / PAGE_SIZE) || 1;
   const vipTotalPages = Math.ceil(vipCount / PAGE_SIZE) || 1;
 
-  // ── Fetch general ──────────────────────────────────────────────────────────
-  const fetchGeneral = useCallback(async (page: number) => {
-    setGeneralLoading(true);
-    setGeneralError("");
+  const isLoggedIn = authStatus === "authenticated" && !!session?.user;
+
+  // ── Fetch today's tips ─────────────────────────────────────────────────────
+  const fetchToday = useCallback(async (page: number, search: string) => {
+    setTodayLoading(true);
+    setTodayError("");
     try {
-      const res = await fetch(
-        `/api/predictions/general?page=${page}&page_size=${PAGE_SIZE}`
-      );
+      const qs = new URLSearchParams({
+        page: String(page),
+        page_size: String(PAGE_SIZE),
+      });
+      if (search) qs.set("search", search);
+      const res = await fetch(`/api/predictions/today?${qs.toString()}`);
+      if (res.status === 401) {
+        setTodayError("Session expired. Please sign in again.");
+        return;
+      }
       const data = (await res.json()) as PaginatedResponse<GeneralPrediction>;
-      if (!res.ok) throw new Error("Failed to load predictions.");
-      setGeneralCount(data.count ?? 0);
-      setGeneralItems(data.items ?? []);
+      if (!res.ok) throw new Error("Failed to load today's tips.");
+      setTodayCount(data.count ?? 0);
+      setTodayItems(data.items ?? []);
     } catch {
-      setGeneralError("Could not load predictions. Please try again.");
+      setTodayError("Could not load today's tips. Please try again.");
     } finally {
-      setGeneralLoading(false);
+      setTodayLoading(false);
     }
   }, []);
 
   // ── Fetch VIP ──────────────────────────────────────────────────────────────
-  const fetchVIP = useCallback(async (page: number) => {
+  const fetchVIP = useCallback(async (page: number, search: string) => {
     setVipLoading(true);
     setVipError("");
     try {
-      const res = await fetch(
-        `/api/predictions/vip?page=${page}&page_size=${PAGE_SIZE}`
-      );
+      const qs = new URLSearchParams({
+        page: String(page),
+        page_size: String(PAGE_SIZE),
+      });
+      if (search) qs.set("search", search);
+      const res = await fetch(`/api/predictions/vip?${qs.toString()}`);
       const data = (await res.json()) as PaginatedResponse<VIPPrediction>;
       if (res.status === 401) {
         setVipError("Session expired. Please sign in again.");
@@ -126,29 +142,33 @@ export default function HomePage() {
     }
   }, []);
 
+  // Refetch today's tips when on General tab and search changes
   useEffect(() => {
-    fetchGeneral(1);
-  }, [fetchGeneral]);
-
-  useEffect(() => {
-    if (activeTab === "vip" && session?.user && vipItems.length === 0) {
-      fetchVIP(1);
+    if (isLoggedIn && activeTab === "general") {
+      setTodayPage(1);
+      fetchToday(1, todaySearch);
     }
-  }, [activeTab, session, fetchVIP, vipItems.length]);
+  }, [isLoggedIn, activeTab, fetchToday, todaySearch]);
 
-  function handleGeneralPageChange(page: number) {
-    setGeneralPage(page);
-    fetchGeneral(page);
+  // Refetch VIP when on VIP tab and search changes
+  useEffect(() => {
+    if (isLoggedIn && activeTab === "vip") {
+      setVipPage(1);
+      fetchVIP(1, vipSearch);
+    }
+  }, [isLoggedIn, activeTab, fetchVIP, vipSearch]);
+
+  function handleTodayPageChange(page: number) {
+    setTodayPage(page);
+    fetchToday(page, todaySearch);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function handleVIPPageChange(page: number) {
     setVipPage(page);
-    fetchVIP(page);
+    fetchVIP(page, vipSearch);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
-
-  const isLoggedIn = authStatus === "authenticated" && !!session?.user;
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4">
@@ -169,7 +189,8 @@ export default function HomePage() {
             >
               <Trophy size={15} />
               General
-              {generalCount > 0 && (
+              {!isLoggedIn && <Lock size={12} className="opacity-60" />}
+              {isLoggedIn && todayCount > 0 && (
                 <span
                   className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
                     activeTab === "general"
@@ -177,7 +198,7 @@ export default function HomePage() {
                       : "bg-base-300 text-base-content/60"
                   }`}
                 >
-                  {generalCount}
+                  {todayCount}
                 </span>
               )}
             </button>
@@ -207,54 +228,80 @@ export default function HomePage() {
             </button>
           </div>
 
-          {/* ── General Tab ── */}
+          {/* ── General Tab (today's tips) ── */}
           {activeTab === "general" && (
             <div className="bg-base-100 border border-base-300 rounded-xl overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-content">
                 <Trophy size={15} />
-                <span className="font-bold text-sm">General Predictions</span>
-                {generalCount > 0 && (
+                <span className="font-bold text-sm">Today&apos;s Tips</span>
+                {isLoggedIn && todayCount > 0 && (
                   <span className="text-primary-content/70 text-xs ml-auto">
-                    {generalCount} tips
+                    {todayCount} tips
                   </span>
                 )}
               </div>
 
-              {generalLoading && <SkeletonRows count={8} />}
-
-              {generalError && (
-                <div className="p-6 text-center">
-                  <p className="text-sm text-error mb-3">{generalError}</p>
-                  <button
-                    onClick={() => fetchGeneral(generalPage)}
-                    className="btn btn-sm btn-outline btn-primary"
-                  >
-                    Retry
-                  </button>
-                </div>
+              {!isLoggedIn && authStatus !== "loading" && (
+                <AuthLockScreen
+                  title="Sign in to see today's tips"
+                  message="Today's predictions are available to registered users. Past results are still visible in the Past Predictions panel."
+                  callbackUrl="/"
+                />
               )}
 
-              {!generalLoading && !generalError && generalItems.length === 0 && (
-                <div className="py-12 text-center">
-                  <p className="text-3xl mb-2">⚽</p>
-                  <p className="font-semibold text-sm">No predictions available yet</p>
-                  <p className="text-xs text-base-content/50 mt-1">Check back later</p>
-                </div>
-              )}
+              {authStatus === "loading" && <SkeletonRows count={6} />}
 
-              {!generalLoading && generalItems.map((p) => (
-                <GeneralPredictionCard key={p.game_id} prediction={p} />
-              ))}
+              {isLoggedIn && (
+                <>
+                  {/* Search bar */}
+                  <div className="p-3 border-b border-base-300 bg-base-200/40">
+                    <SearchBar
+                      placeholder="Search today's tips by team or competition…"
+                      onSearch={setTodaySearch}
+                    />
+                  </div>
 
-              {!generalError && (
-                <div className="border-t border-base-300">
-                  <Pagination
-                    currentPage={generalPage}
-                    totalPages={generalTotalPages}
-                    onPageChange={handleGeneralPageChange}
-                    loading={generalLoading}
-                  />
-                </div>
+                  {todayLoading && <SkeletonRows count={6} />}
+
+                  {todayError && (
+                    <div className="p-6 text-center">
+                      <p className="text-sm text-error mb-3">{todayError}</p>
+                      <button
+                        onClick={() => fetchToday(todayPage, todaySearch)}
+                        className="btn btn-sm btn-outline btn-primary"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  )}
+
+                  {!todayLoading && !todayError && todayItems.length === 0 && (
+                    <div className="py-12 text-center">
+                      <p className="text-3xl mb-2">{todaySearch ? "🔍" : "⚽"}</p>
+                      <p className="font-semibold text-sm">
+                        {todaySearch ? `No matches for "${todaySearch}"` : "No tips for today yet"}
+                      </p>
+                      <p className="text-xs text-base-content/50 mt-1">
+                        {todaySearch ? "Try a different team or league name" : "Check back later"}
+                      </p>
+                    </div>
+                  )}
+
+                  {!todayLoading && todayItems.map((p) => (
+                    <GeneralPredictionCard key={p.game_id} prediction={p} />
+                  ))}
+
+                  {!todayError && todayItems.length > 0 && (
+                    <div className="border-t border-base-300">
+                      <Pagination
+                        currentPage={todayPage}
+                        totalPages={todayTotalPages}
+                        onPageChange={handleTodayPageChange}
+                        loading={todayLoading}
+                      />
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -272,22 +319,33 @@ export default function HomePage() {
                 )}
               </div>
 
-              {/* Not logged in */}
-              {!isLoggedIn && authStatus !== "loading" && <VIPLockScreen />}
+              {!isLoggedIn && authStatus !== "loading" && (
+                <AuthLockScreen
+                  title="VIP Predictions"
+                  message="VIP predictions include team logos, competition details, accurate odds and higher-confidence tips. Sign in to unlock access."
+                  callbackUrl="/"
+                />
+              )}
 
-              {/* Loading session */}
               {authStatus === "loading" && <SkeletonRows count={4} />}
 
-              {/* Logged in */}
               {isLoggedIn && (
                 <>
+                  {/* Search bar */}
+                  <div className="p-3 border-b border-base-300 bg-base-200/40">
+                    <SearchBar
+                      placeholder="Search VIP picks by team or league…"
+                      onSearch={setVipSearch}
+                    />
+                  </div>
+
                   {vipLoading && <SkeletonRows count={4} />}
 
                   {vipError && (
                     <div className="p-6 text-center">
                       <p className="text-sm text-error mb-3">{vipError}</p>
                       <button
-                        onClick={() => fetchVIP(vipPage)}
+                        onClick={() => fetchVIP(vipPage, vipSearch)}
                         className="btn btn-sm btn-outline btn-primary"
                       >
                         Retry
@@ -297,9 +355,13 @@ export default function HomePage() {
 
                   {!vipLoading && !vipError && vipItems.length === 0 && (
                     <div className="py-12 text-center">
-                      <p className="text-3xl mb-2">👑</p>
-                      <p className="font-semibold text-sm">No VIP predictions yet</p>
-                      <p className="text-xs text-base-content/50 mt-1">Check back later</p>
+                      <p className="text-3xl mb-2">{vipSearch ? "🔍" : "👑"}</p>
+                      <p className="font-semibold text-sm">
+                        {vipSearch ? `No matches for "${vipSearch}"` : "No VIP predictions yet"}
+                      </p>
+                      <p className="text-xs text-base-content/50 mt-1">
+                        {vipSearch ? "Try a different team or league name" : "Check back later"}
+                      </p>
                     </div>
                   )}
 
@@ -309,7 +371,7 @@ export default function HomePage() {
                     ))}
                   </div>
 
-                  {!vipError && (
+                  {!vipError && vipItems.length > 0 && (
                     <div className="border-t border-base-300">
                       <Pagination
                         currentPage={vipPage}
@@ -326,8 +388,9 @@ export default function HomePage() {
         </div>
 
         {/* ── Sidebar ── */}
-        <aside className="w-full lg:w-72 xl:w-80 flex-shrink-0 order-1 lg:order-2 space-y-4">
+        <aside className="w-full lg:w-80 xl:w-96 flex-shrink-0 order-1 lg:order-2 space-y-4">
           <PredictionOfTheDay />
+          <PastPredictionsList limit={6} />
         </aside>
       </div>
     </div>

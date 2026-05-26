@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -127,7 +127,17 @@ function isValidTab(value: string | null): value is Tab {
   return value === "today" || value === "vip" || value === "past";
 }
 
-export default function AllPredictionsPage() {
+function AllPredictionsFallback() {
+  return (
+    <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-6 animate-pulse">
+      <div className="h-36 bg-base-300 rounded-2xl mb-6" />
+      <div className="h-12 bg-base-300 rounded-xl mb-4" />
+      <div className="h-96 bg-base-300 rounded-xl" />
+    </div>
+  );
+}
+
+function AllPredictionsContent() {
   const { data: session, status: authStatus } = useSession();
   const isLoggedIn = authStatus === "authenticated" && !!session?.user;
 
@@ -533,5 +543,13 @@ export default function AllPredictionsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AllPredictionsPage() {
+  return (
+    <Suspense fallback={<AllPredictionsFallback />}>
+      <AllPredictionsContent />
+    </Suspense>
   );
 }

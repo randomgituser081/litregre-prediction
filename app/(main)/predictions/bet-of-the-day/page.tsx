@@ -23,18 +23,79 @@ interface NormalisedBet {
   status: string;
 }
 
-function normalise(raw: BetOfDayRaw): NormalisedBet | null {
+interface TeamObject {
+  id?: number;
+  logo?: string | null;
+  name?: string;
+  slug?: string;
+}
+
+function normalise(raw: BetOfDayRaw | BetOfDayRaw[] | null): NormalisedBet | null {
+  if (!raw) return null;
+
+  // { status, data: [...] } envelope from the backend
+  if (
+    !Array.isArray(raw) &&
+    typeof raw === "object" &&
+    "data" in raw &&
+    Array.isArray((raw as { data: unknown }).data)
+  ) {
+    const first = ((raw as { data: BetOfDayRaw[] }).data)[0];
+    if (first) return normalise(first);
+    return null;
+  }
+
   // Paginated VIPSchema wrapper → take first item
-  if (Array.isArray((raw as { items?: unknown }).items)) {
+  if (
+    !Array.isArray(raw) &&
+    Array.isArray((raw as { items?: unknown }).items)
+  ) {
     const first = ((raw as { items: BetOfDayRaw[] }).items)[0];
     if (first) return normalise(first);
     return null;
   }
   // Array at root → take first
   if (Array.isArray(raw)) {
-    const first = (raw as BetOfDayRaw[])[0];
+    const first = raw[0];
     if (first) return normalise(first);
     return null;
+  }
+
+  const r = raw as Record<string, unknown>;
+
+  // Flat object shape from /api/prediction/bet_of_day/
+  // { home_team: { name, logo, ... }, away_team: { ... }, prediction, odds, confidence, probability, competition }
+  if (
+    r.home_team &&
+    typeof r.home_team === "object" &&
+    r.away_team &&
+    typeof r.away_team === "object"
+  ) {
+    const home = r.home_team as TeamObject;
+    const away = r.away_team as TeamObject;
+    const comp = r.competition as { name?: string } | undefined;
+
+    const oddsRaw = r.odds;
+    const oddsNum =
+      typeof oddsRaw === "number"
+        ? oddsRaw
+        : typeof oddsRaw === "string"
+          ? parseFloat(oddsRaw)
+          : null;
+
+    return {
+      home: home.name ?? "Home",
+      away: away.name ?? "Away",
+      homeLogo: home.logo ?? null,
+      awayLogo: away.logo ?? null,
+      competition: comp?.name ?? "",
+      kickoff: (r.kickoff as string) ?? (r.date as string) ?? null,
+      label: (r.prediction as string) ?? "",
+      probability:
+        typeof r.probability === "number" ? (r.probability as number) : null,
+      odds: oddsNum != null && !Number.isNaN(oddsNum) ? oddsNum : null,
+      status: (r.status as string) ?? "upcoming",
+    };
   }
 
   // VIPPrediction shape
@@ -54,23 +115,22 @@ function normalise(raw: BetOfDayRaw): NormalisedBet | null {
     };
   }
 
-  // General prediction shape
-  const g = raw as Record<string, unknown>;
-  if (typeof g.home_team === "string" && typeof g.away_team === "string") {
+  // General prediction (string team names) shape
+  if (typeof r.home_team === "string" && typeof r.away_team === "string") {
     return {
-      home: g.home_team as string,
-      away: g.away_team as string,
+      home: r.home_team as string,
+      away: r.away_team as string,
       homeLogo: null,
       awayLogo: null,
       competition: "",
-      kickoff: (g.date as string) ?? null,
-      label: (g.prediction as string) ?? "",
+      kickoff: (r.date as string) ?? null,
+      label: (r.prediction as string) ?? "",
       probability:
-        typeof g.prediction_probability === "number"
-          ? (g.prediction_probability as number)
+        typeof r.prediction_probability === "number"
+          ? (r.prediction_probability as number)
           : null,
       odds: null,
-      status: (g.is_finished as boolean) ? "finished" : "upcoming",
+      status: (r.is_finished as boolean) ? "finished" : "upcoming",
     };
   }
 

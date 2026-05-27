@@ -23,23 +23,16 @@ interface Competition {
   country_code: string;
 }
 
-interface Pick {
-  odds?: string;
-  label?: string;
-  market?: string;
-  confidence?: string;
-  probability?: number;
-}
-
 export interface BetOfDay {
-  match_id: number;
-  kickoff: string | null;
-  status: string;
   home_team: TeamObj;
   away_team: TeamObj;
+  prediction: string;
+  odds: string | number;
+  confidence: string;
+  probability: number;
   competition?: Competition;
-  pick?: Pick;
-  score?: { home: number | null; away: number | null };
+  kickoff?: string | null;
+  status?: string;
 }
 
 interface ApiResponse {
@@ -75,6 +68,20 @@ function TeamBlock({ team }: { team: TeamObj }) {
   );
 }
 
+function formatPct(p: number | undefined | null): string {
+  if (p == null) return "—";
+  // Backend sends 0–1 floats OR 0–100 whole numbers depending on deploy.
+  const pct = p > 1 ? Math.round(p) : Math.round(p * 100);
+  return `${pct}%`;
+}
+
+function formatOdds(o: string | number | undefined | null): string {
+  if (o == null || o === "") return "—";
+  const n = typeof o === "number" ? o : parseFloat(o);
+  if (Number.isNaN(n)) return String(o);
+  return n.toFixed(2);
+}
+
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function PredictionOfTheDay() {
@@ -90,8 +97,22 @@ export default function PredictionOfTheDay() {
         if (!r.ok) throw new Error("Failed");
         return r.json();
       })
-      .then((data: ApiResponse) => {
-        setBet(data.data?.[0] ?? null);
+      .then((data: ApiResponse | BetOfDay | BetOfDay[]) => {
+        // Accept several shapes defensively.
+        let first: BetOfDay | null = null;
+        if (Array.isArray(data)) {
+          first = data[0] ?? null;
+        } else if (
+          data &&
+          typeof data === "object" &&
+          "data" in data &&
+          Array.isArray((data as ApiResponse).data)
+        ) {
+          first = (data as ApiResponse).data[0] ?? null;
+        } else if (data && typeof data === "object" && "home_team" in data) {
+          first = data as BetOfDay;
+        }
+        setBet(first);
       })
       .catch(() => {
         setBet(null);
@@ -101,10 +122,22 @@ export default function PredictionOfTheDay() {
   }, []);
 
   const kickoff = bet?.kickoff ? dayjs(bet.kickoff) : null;
-  const confidencePct = bet?.pick?.probability ?? 0;
-  const odds = bet?.pick?.odds ?? "—";
-  const pickLabel = bet?.pick?.label ?? "—";
+  const confidencePct = formatPct(bet?.probability);
+  const oddsDisplay = formatOdds(bet?.odds);
+  const pickLabel = bet?.prediction ?? "—";
   const competitionName = bet?.competition?.name ?? "Football";
+  const confidenceTier = bet?.confidence?.toLowerCase();
+
+  // Status fallback: if backend didn't send one, treat as upcoming.
+  const statusRaw = bet?.status?.toLowerCase();
+  const statusLabel =
+    statusRaw === "ft"
+      ? "Finished"
+      : statusRaw === "live"
+        ? "Live"
+        : bet?.status
+          ? bet.status
+          : "Upcoming";
 
   return (
     <div className="bg-base-100 border border-base-300 rounded-xl overflow-hidden shadow-sm">
@@ -161,29 +194,40 @@ export default function PredictionOfTheDay() {
             <p className="text-[10px] text-base-content/50 uppercase tracking-wide mb-1">
               Our Pick
             </p>
-            <p className="font-bold text-sm text-primary mb-2">
-              {pickLabel}
-            </p>
+            <p className="font-bold text-sm text-primary mb-2">{pickLabel}</p>
 
             <div className="grid grid-cols-3 gap-2 text-center">
               <div>
                 <p className="text-[10px] text-base-content/50">Confidence</p>
-                <p className="font-bold text-sm text-success">{confidencePct}%</p>
+                <p
+                  className={`font-bold text-sm ${
+                    confidenceTier === "high"
+                      ? "text-success"
+                      : confidenceTier === "medium"
+                        ? "text-warning"
+                        : confidenceTier === "low"
+                          ? "text-error"
+                          : "text-base-content"
+                  }`}
+                >
+                  {confidencePct}
+                </p>
               </div>
               <div>
                 <p className="text-[10px] text-base-content/50">Odds</p>
-                <p className="font-bold text-sm">{odds}</p>
+                <p className="font-bold text-sm">{oddsDisplay}</p>
               </div>
               <div>
                 <p className="text-[10px] text-base-content/50">Status</p>
-                <p className="font-bold text-[11px] capitalize">
-                  {bet.status?.toLowerCase() === "ft" ? "Finished" : bet.status || "Upcoming"}
-                </p>
+                <p className="font-bold text-[11px] capitalize">{statusLabel}</p>
               </div>
             </div>
           </div>
 
-          <Link href="/predictions/bet-of-the-day" className="btn btn-primary btn-sm w-full">
+          <Link
+            href="/predictions/bet-of-the-day"
+            className="btn btn-primary btn-sm w-full"
+          >
             View Bet of the Day
           </Link>
         </div>

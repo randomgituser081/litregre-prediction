@@ -17,7 +17,7 @@ interface ApiResponse {
   count: number;
 }
 
-const PAGE_SIZE = 30;
+const PAGE_SIZE = 10;
 
 function SkeletonRows({ count = 8 }: { count?: number }) {
   return (

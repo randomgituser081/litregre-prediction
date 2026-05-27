@@ -23,7 +23,7 @@ interface PaginatedResponse<T> {
   count: number;
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 function SkeletonRows({ count = 6 }: { count?: number }) {
   return (

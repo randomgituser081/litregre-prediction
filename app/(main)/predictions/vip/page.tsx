@@ -15,7 +15,7 @@ interface ApiResponse {
   count: number;
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 function SkeletonCards({ count = 4 }: { count?: number }) {
   return (

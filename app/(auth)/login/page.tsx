@@ -15,6 +15,7 @@ function LoginContent() {
   const phoneFromQuery = searchParams.get("phone") ?? "";
   const inviteRequired = searchParams.get("inviteRequired") === "1";
   const invalidLink = searchParams.get("invalidLink") === "1";
+  const expired = searchParams.get("expired") === "1";
 
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
@@ -67,6 +68,13 @@ function LoginContent() {
             Sign in to your LitreGre Prediction account
           </p>
         </div>
+
+        {expired && (
+          <div className="alert alert-warning mb-4 py-2 text-sm">
+            <AlertCircle size={14} />
+            Your session has expired. Please sign in again to continue.
+          </div>
+        )}
 
         {verified && (
           <div className="alert alert-success mb-4 py-2 text-sm">

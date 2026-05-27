@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { History, ChevronRight } from "lucide-react";
 import dayjs from "dayjs";
+import { apiFetch } from "@/lib/apiFetch";
 
 interface GeneralItem {
   game_id: string;
@@ -42,7 +43,7 @@ export default function PastPredictionsList({ limit = 6 }: { limit?: number }) {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/predictions/general?page=1&page_size=${limit}`)
+    apiFetch(`/api/predictions/general?page=1&page_size=${limit}`)
       .then((r) => r.json())
       .then((data: ApiResponse) => {
         setItems(data.items ?? []);

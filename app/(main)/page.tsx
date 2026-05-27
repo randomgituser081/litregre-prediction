@@ -14,6 +14,7 @@ import VIPPredictionCard, {
 } from "@/components/predictions/VIPPredictionCard";
 import Pagination from "@/components/ui/Pagination";
 import SearchBar from "@/components/ui/SearchBar";
+import { apiFetch } from "@/lib/apiFetch";
 
 type Tab = "general" | "vip";
 
@@ -100,7 +101,7 @@ export default function HomePage() {
         page_size: String(PAGE_SIZE),
       });
       if (search) qs.set("search", search);
-      const res = await fetch(`/api/predictions/today?${qs.toString()}`);
+      const res = await apiFetch(`/api/predictions/today?${qs.toString()}`);
       if (res.status === 401) {
         setTodayError("Session expired. Please sign in again.");
         return;
@@ -126,7 +127,7 @@ export default function HomePage() {
         page_size: String(PAGE_SIZE),
       });
       if (search) qs.set("search", search);
-      const res = await fetch(`/api/predictions/vip?${qs.toString()}`);
+      const res = await apiFetch(`/api/predictions/vip?${qs.toString()}`);
       const data = (await res.json()) as PaginatedResponse<VIPPrediction>;
       if (res.status === 401) {
         setVipError("Session expired. Please sign in again.");

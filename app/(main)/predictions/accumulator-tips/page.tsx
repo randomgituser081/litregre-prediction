@@ -8,6 +8,7 @@ import VIPPredictionCard, {
   type VIPPrediction,
 } from "@/components/predictions/VIPPredictionCard";
 import Pagination from "@/components/ui/Pagination";
+import { apiFetch } from "@/lib/apiFetch";
 import { BETTING_SITES } from "@/lib/mockData";
 import BettingSiteWidget from "@/components/ads/BettingSiteWidget";
 
@@ -81,7 +82,7 @@ export default function AccumulatorPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/predictions/accumulator?page=${p}&page_size=${PAGE_SIZE}`
       );
       if (res.status === 401) {

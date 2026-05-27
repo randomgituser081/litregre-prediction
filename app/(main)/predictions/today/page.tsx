@@ -10,6 +10,7 @@ import GeneralPredictionCard, {
   type GeneralPrediction,
 } from "@/components/predictions/GeneralPredictionCard";
 import Pagination from "@/components/ui/Pagination";
+import { apiFetch } from "@/lib/apiFetch";
 
 interface ApiResponse {
   items: GeneralPrediction[];
@@ -54,7 +55,7 @@ export default function TodayPredictionsPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/predictions/today?page=${p}&page_size=${PAGE_SIZE}`
       );
       if (res.status === 401) {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Star, RefreshCw } from "lucide-react";
 import dayjs from "dayjs";
 import type { VIPPrediction } from "@/components/predictions/VIPPredictionCard";
+import { apiFetch } from "@/lib/apiFetch";
 
 // The bet_of_day API has no defined schema — it may return a single object,
 // an array, or a paginated response. We handle all cases below.
@@ -122,7 +123,7 @@ export default function BetOfTheDayPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/predictions/bet-of-day");
+      const res = await apiFetch("/api/predictions/bet-of-day");
       if (!res.ok) throw new Error();
       const data = (await res.json()) as BetOfDayRaw;
       setRaw(data);

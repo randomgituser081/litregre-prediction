@@ -11,6 +11,8 @@ declare module "next-auth" {
       /** JWT access token from the prediction backend. */
       backendToken?: string;
     };
+    /** True when the backend JWT has expired and the user must sign in again. */
+    expired?: boolean;
   }
 
   interface User {
@@ -27,5 +29,7 @@ declare module "next-auth/jwt" {
     id?: string;
     /** JWT access token from the prediction backend. */
     backendToken?: string;
+    /** Unix timestamp (seconds) when the backend JWT expires. */
+    backendTokenExp?: number;
   }
 }

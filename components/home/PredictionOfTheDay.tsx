@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Trophy, Lock, Flame } from "lucide-react";
 import dayjs from "dayjs";
+import { apiFetch } from "@/lib/apiFetch";
 
 // ── Types matching /api/prediction/bet_of_day/ ─────────────────────────────────
 
@@ -88,7 +89,7 @@ export default function PredictionOfTheDay() {
   useEffect(() => {
     if (!isLoggedIn) return;
     setLoading(true);
-    fetch("/api/predictions/bet-of-day")
+    apiFetch("/api/predictions/bet-of-day")
       .then((r) => r.json())
       .then((data: ApiResponse) => {
         setBet(data.data?.[0] ?? null);

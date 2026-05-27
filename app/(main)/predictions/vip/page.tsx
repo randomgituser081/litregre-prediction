@@ -8,6 +8,7 @@ import VIPPredictionCard, {
   type VIPPrediction,
 } from "@/components/predictions/VIPPredictionCard";
 import Pagination from "@/components/ui/Pagination";
+import { apiFetch } from "@/lib/apiFetch";
 
 interface ApiResponse {
   items: VIPPrediction[];
@@ -53,7 +54,7 @@ export default function VIPPredictionsPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/predictions/vip?page=${p}&page_size=${PAGE_SIZE}`
       );
       if (res.status === 401) {

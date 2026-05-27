@@ -70,13 +70,13 @@ export default function HomePage() {
   const { data: session, status: authStatus } = useSession();
   const [activeTab, setActiveTab] = useState<Tab>("general");
 
-  // ── General predictions (public) ───────────────────────────────────────────
-  const [generalItems, setGeneralItems] = useState<GeneralPrediction[]>([]);
-  const [generalCount, setGeneralCount] = useState(0);
-  const [generalPage, setGeneralPage] = useState(1);
-  const [generalLoading, setGeneralLoading] = useState(false);
-  const [generalError, setGeneralError] = useState("");
-  const [generalSearch, setGeneralSearch] = useState("");
+  // ── Today's tips (General tab — login required) ────────────────────────────
+  const [todayItems, setTodayItems] = useState<GeneralPrediction[]>([]);
+  const [todayCount, setTodayCount] = useState(0);
+  const [todayPage, setTodayPage] = useState(1);
+  const [todayLoading, setTodayLoading] = useState(false);
+  const [todayError, setTodayError] = useState("");
+  const [todaySearch, setTodaySearch] = useState("");
 
   // ── VIP predictions ────────────────────────────────────────────────────────
   const [vipItems, setVipItems] = useState<VIPPrediction[]>([]);
@@ -86,30 +86,34 @@ export default function HomePage() {
   const [vipError, setVipError] = useState("");
   const [vipSearch, setVipSearch] = useState("");
 
-  const generalTotalPages = Math.ceil(generalCount / PAGE_SIZE) || 1;
+  const todayTotalPages = Math.ceil(todayCount / PAGE_SIZE) || 1;
   const vipTotalPages = Math.ceil(vipCount / PAGE_SIZE) || 1;
 
   const isLoggedIn = authStatus === "authenticated" && !!session?.user;
 
-  // ── Fetch general (public — no login) ──────────────────────────────────────
-  const fetchGeneral = useCallback(async (page: number, search: string) => {
-    setGeneralLoading(true);
-    setGeneralError("");
+  // ── Fetch today's tips (login required) ───────────────────────────────────
+  const fetchToday = useCallback(async (page: number, search: string) => {
+    setTodayLoading(true);
+    setTodayError("");
     try {
       const qs = new URLSearchParams({
         page: String(page),
         page_size: String(PAGE_SIZE),
       });
       if (search) qs.set("search", search);
-      const res = await fetch(`/api/predictions/general?${qs.toString()}`);
+      const res = await apiFetch(`/api/predictions/today?${qs.toString()}`);
+      if (res.status === 401) {
+        setTodayError("Session expired. Please sign in again.");
+        return;
+      }
       const data = (await res.json()) as PaginatedResponse<GeneralPrediction>;
-      if (!res.ok) throw new Error("Failed to load predictions.");
-      setGeneralCount(data.count ?? 0);
-      setGeneralItems(data.items ?? []);
+      if (!res.ok) throw new Error("Failed to load today's tips.");
+      setTodayCount(data.count ?? 0);
+      setTodayItems(data.items ?? []);
     } catch {
-      setGeneralError("Could not load predictions. Please try again.");
+      setTodayError("Could not load today's tips. Please try again.");
     } finally {
-      setGeneralLoading(false);
+      setTodayLoading(false);
     }
   }, []);
 
@@ -139,13 +143,13 @@ export default function HomePage() {
     }
   }, []);
 
-  // Load general when tab is active (public — no login required)
+  // Refetch today's tips when on General tab (login required) and search changes
   useEffect(() => {
-    if (activeTab === "general") {
-      setGeneralPage(1);
-      fetchGeneral(1, generalSearch);
+    if (isLoggedIn && activeTab === "general") {
+      setTodayPage(1);
+      fetchToday(1, todaySearch);
     }
-  }, [activeTab, fetchGeneral, generalSearch]);
+  }, [isLoggedIn, activeTab, fetchToday, todaySearch]);
 
   // Refetch VIP when on VIP tab and search changes
   useEffect(() => {
@@ -155,9 +159,9 @@ export default function HomePage() {
     }
   }, [isLoggedIn, activeTab, fetchVIP, vipSearch]);
 
-  function handleGeneralPageChange(page: number) {
-    setGeneralPage(page);
-    fetchGeneral(page, generalSearch);
+  function handleTodayPageChange(page: number) {
+    setTodayPage(page);
+    fetchToday(page, todaySearch);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -186,7 +190,8 @@ export default function HomePage() {
             >
               <Trophy size={15} />
               General
-              {generalCount > 0 && (
+              {!isLoggedIn && <Lock size={12} className="opacity-60" />}
+              {isLoggedIn && todayCount > 0 && (
                 <span
                   className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
                     activeTab === "general"
@@ -194,7 +199,7 @@ export default function HomePage() {
                       : "bg-base-300 text-base-content/60"
                   }`}
                 >
-                  {generalCount}
+                  {todayCount}
                 </span>
               )}
             </button>
@@ -224,66 +229,82 @@ export default function HomePage() {
             </button>
           </div>
 
-          {/* ── General Tab (public) ── */}
+          {/* ── General Tab (today's tips — login required) ── */}
           {activeTab === "general" && (
             <div className="bg-base-100 border border-base-300 rounded-xl overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-content">
                 <Trophy size={15} />
-                <span className="font-bold text-sm">General Predictions</span>
-                {generalCount > 0 && (
+                <span className="font-bold text-sm">Today&apos;s Tips</span>
+                {isLoggedIn && todayCount > 0 && (
                   <span className="text-primary-content/70 text-xs ml-auto">
-                    {generalCount} tips
+                    {todayCount} tips
                   </span>
                 )}
               </div>
 
-              <div className="p-3 border-b border-base-300 bg-base-200/40">
-                <SearchBar
-                  placeholder="Search by team name…"
-                  onSearch={setGeneralSearch}
+              {!isLoggedIn && authStatus !== "loading" && (
+                <AuthLockScreen
+                  title="Sign in to see today's tips"
+                  message="Today's predictions are available to registered users. Past results are still visible in the Past Predictions panel."
+                  callbackUrl="/"
                 />
-              </div>
-
-              {generalLoading && <SkeletonRows count={6} />}
-
-              {generalError && (
-                <div className="p-6 text-center">
-                  <p className="text-sm text-error mb-3">{generalError}</p>
-                  <button
-                    onClick={() => fetchGeneral(generalPage, generalSearch)}
-                    className="btn btn-sm btn-outline btn-primary"
-                  >
-                    Retry
-                  </button>
-                </div>
               )}
 
-              {!generalLoading && !generalError && generalItems.length === 0 && (
-                <div className="py-12 text-center">
-                  <p className="text-3xl mb-2">{generalSearch ? "🔍" : "⚽"}</p>
-                  <p className="font-semibold text-sm">
-                    {generalSearch
-                      ? `No matches for "${generalSearch}"`
-                      : "No predictions available yet"}
-                  </p>
-                  <p className="text-xs text-base-content/50 mt-1">Check back later</p>
-                </div>
-              )}
+              {authStatus === "loading" && <SkeletonRows count={6} />}
 
-              {!generalLoading &&
-                generalItems.map((p) => (
-                  <GeneralPredictionCard key={p.game_id} prediction={p} />
-                ))}
+              {isLoggedIn && (
+                <>
+                  <div className="p-3 border-b border-base-300 bg-base-200/40">
+                    <SearchBar
+                      placeholder="Search today's tips by team or competition…"
+                      onSearch={setTodaySearch}
+                    />
+                  </div>
 
-              {!generalError && generalItems.length > 0 && (
-                <div className="border-t border-base-300">
-                  <Pagination
-                    currentPage={generalPage}
-                    totalPages={generalTotalPages}
-                    onPageChange={handleGeneralPageChange}
-                    loading={generalLoading}
-                  />
-                </div>
+                  {todayLoading && <SkeletonRows count={6} />}
+
+                  {todayError && (
+                    <div className="p-6 text-center">
+                      <p className="text-sm text-error mb-3">{todayError}</p>
+                      <button
+                        onClick={() => fetchToday(todayPage, todaySearch)}
+                        className="btn btn-sm btn-outline btn-primary"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  )}
+
+                  {!todayLoading && !todayError && todayItems.length === 0 && (
+                    <div className="py-12 text-center">
+                      <p className="text-3xl mb-2">{todaySearch ? "🔍" : "⚽"}</p>
+                      <p className="font-semibold text-sm">
+                        {todaySearch
+                          ? `No matches for "${todaySearch}"`
+                          : "No tips for today yet"}
+                      </p>
+                      <p className="text-xs text-base-content/50 mt-1">
+                        {todaySearch ? "Try a different team or league name" : "Check back later"}
+                      </p>
+                    </div>
+                  )}
+
+                  {!todayLoading &&
+                    todayItems.map((p) => (
+                      <GeneralPredictionCard key={p.game_id} prediction={p} />
+                    ))}
+
+                  {!todayError && todayItems.length > 0 && (
+                    <div className="border-t border-base-300">
+                      <Pagination
+                        currentPage={todayPage}
+                        totalPages={todayTotalPages}
+                        onPageChange={handleTodayPageChange}
+                        loading={todayLoading}
+                      />
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}

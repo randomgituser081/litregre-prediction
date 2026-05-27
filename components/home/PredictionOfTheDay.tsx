@@ -3,10 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { Trophy, Lock, Flame } from "lucide-react";
+import { Trophy, Flame } from "lucide-react";
 import dayjs from "dayjs";
-import { apiFetch } from "@/lib/apiFetch";
 
 // ── Types matching /api/prediction/bet_of_day/ ─────────────────────────────────
 
@@ -80,23 +78,27 @@ function TeamBlock({ team }: { team: TeamObj }) {
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function PredictionOfTheDay() {
-  const { data: session, status } = useSession();
   const [bet, setBet] = useState<BetOfDay | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const isLoggedIn = status === "authenticated" && !!session?.user;
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (!isLoggedIn) return;
     setLoading(true);
-    apiFetch("/api/predictions/bet-of-day")
-      .then((r) => r.json())
+    setError(false);
+    fetch("/api/predictions/bet-of-day")
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed");
+        return r.json();
+      })
       .then((data: ApiResponse) => {
         setBet(data.data?.[0] ?? null);
       })
-      .catch(() => setBet(null))
+      .catch(() => {
+        setBet(null);
+        setError(true);
+      })
       .finally(() => setLoading(false));
-  }, [isLoggedIn]);
+  }, []);
 
   const kickoff = bet?.kickoff ? dayjs(bet.kickoff) : null;
   const confidencePct = bet?.pick?.probability ?? 0;
@@ -124,24 +126,8 @@ export default function PredictionOfTheDay() {
         </div>
       )}
 
-      {/* Not logged in */}
-      {!isLoggedIn && status !== "loading" && !loading && (
-        <div className="p-5 text-center">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-            <Lock size={18} className="text-primary" />
-          </div>
-          <p className="text-sm font-semibold mb-1">Today&apos;s Top Pick</p>
-          <p className="text-xs text-base-content/55 mb-4">
-            Sign in to see today&apos;s highest-confidence prediction.
-          </p>
-          <Link href="/login" className="btn btn-primary btn-sm w-full">
-            Sign In to View
-          </Link>
-        </div>
-      )}
-
-      {/* Logged in — no data */}
-      {isLoggedIn && !loading && !bet && (
+      {/* Error / empty */}
+      {!loading && (error || !bet) && (
         <div className="p-5 text-center">
           <Trophy size={28} className="text-base-content/20 mx-auto mb-2" />
           <p className="text-sm font-semibold">No tip for today yet</p>
@@ -149,10 +135,9 @@ export default function PredictionOfTheDay() {
         </div>
       )}
 
-      {/* Logged in — show bet */}
-      {isLoggedIn && !loading && bet && (
+      {/* Show bet — public, no login required */}
+      {!loading && bet && (
         <div className="p-4">
-          {/* Competition + kickoff */}
           <div className="flex items-center justify-between text-[10px] uppercase tracking-wide mb-3 gap-2">
             <span className="font-bold text-primary truncate">
               {competitionName}
@@ -164,7 +149,6 @@ export default function PredictionOfTheDay() {
             )}
           </div>
 
-          {/* Teams — home LEFT, away RIGHT */}
           <div className="flex items-center justify-between gap-2 mb-4">
             {bet.home_team && <TeamBlock team={bet.home_team} />}
             <div className="text-base-content/30 font-bold text-xs flex-shrink-0 px-1">
@@ -173,7 +157,6 @@ export default function PredictionOfTheDay() {
             {bet.away_team && <TeamBlock team={bet.away_team} />}
           </div>
 
-          {/* Pick details */}
           <div className="bg-base-200/60 rounded-lg p-3 mb-3">
             <p className="text-[10px] text-base-content/50 uppercase tracking-wide mb-1">
               Our Pick
@@ -200,8 +183,8 @@ export default function PredictionOfTheDay() {
             </div>
           </div>
 
-          <Link href="/predictions/all" className="btn btn-primary btn-sm w-full">
-            View All Tips
+          <Link href="/predictions/bet-of-the-day" className="btn btn-primary btn-sm w-full">
+            View Bet of the Day
           </Link>
         </div>
       )}

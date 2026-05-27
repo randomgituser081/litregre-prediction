@@ -5,18 +5,17 @@ import { authOptions } from "@/lib/authOptions";
 const BASE_URL =
   process.env.PREDICTION_API_BASE_URL ?? "https://mtn.lenhub.net";
 
+/** Public endpoint per API docs — no auth required; token sent if available. */
 export async function GET() {
   const session = await getServerSession(authOptions);
-
-  if (!session?.user?.backendToken) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const headers: HeadersInit = {};
+  if (session?.user?.backendToken) {
+    headers.Authorization = `Bearer ${session.user.backendToken}`;
   }
 
   try {
     const res = await fetch(`${BASE_URL}/api/prediction/bet_of_day/`, {
-      headers: {
-        Authorization: `Bearer ${session.user.backendToken}`,
-      },
+      headers,
       next: { revalidate: 300 },
     });
     const data = await res.json();

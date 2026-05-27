@@ -25,11 +25,11 @@ interface Competition {
 }
 
 interface Pick {
-  odds: string;
-  label: string;
-  market: string;
-  confidence: string;
-  probability: number;
+  odds?: string;
+  label?: string;
+  market?: string;
+  confidence?: string;
+  probability?: number;
 }
 
 export interface BetOfDay {
@@ -38,8 +38,8 @@ export interface BetOfDay {
   status: string;
   home_team: TeamObj;
   away_team: TeamObj;
-  competition: Competition;
-  pick: Pick;
+  competition?: Competition;
+  pick?: Pick;
   score?: { home: number | null; away: number | null };
 }
 
@@ -100,6 +100,8 @@ export default function PredictionOfTheDay() {
   const kickoff = bet?.kickoff ? dayjs(bet.kickoff) : null;
   const confidencePct = bet?.pick?.probability ?? 0;
   const odds = bet?.pick?.odds ?? "—";
+  const pickLabel = bet?.pick?.label ?? "—";
+  const competitionName = bet?.competition?.name ?? "Football";
 
   return (
     <div className="bg-base-100 border border-base-300 rounded-xl overflow-hidden shadow-sm">
@@ -152,7 +154,7 @@ export default function PredictionOfTheDay() {
           {/* Competition + kickoff */}
           <div className="flex items-center justify-between text-[10px] uppercase tracking-wide mb-3 gap-2">
             <span className="font-bold text-primary truncate">
-              {bet.competition.name}
+              {competitionName}
             </span>
             {kickoff?.isValid() && (
               <span className="text-base-content/50 flex-shrink-0">
@@ -163,11 +165,11 @@ export default function PredictionOfTheDay() {
 
           {/* Teams — home LEFT, away RIGHT */}
           <div className="flex items-center justify-between gap-2 mb-4">
-            <TeamBlock team={bet.home_team} />
+            {bet.home_team && <TeamBlock team={bet.home_team} />}
             <div className="text-base-content/30 font-bold text-xs flex-shrink-0 px-1">
               VS
             </div>
-            <TeamBlock team={bet.away_team} />
+            {bet.away_team && <TeamBlock team={bet.away_team} />}
           </div>
 
           {/* Pick details */}
@@ -176,7 +178,7 @@ export default function PredictionOfTheDay() {
               Our Pick
             </p>
             <p className="font-bold text-sm text-primary mb-2">
-              {bet.pick.label}
+              {pickLabel}
             </p>
 
             <div className="grid grid-cols-3 gap-2 text-center">

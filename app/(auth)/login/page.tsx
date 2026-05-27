@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Trophy, Eye, EyeOff, Phone, Lock, AlertCircle } from "lucide-react";
 import toast from "react-hot-toast";
+import { normalizeNigerianPhone } from "@/lib/phone";
 
 function LoginContent() {
   const router = useRouter();
@@ -25,16 +26,22 @@ function LoginContent() {
 
   useEffect(() => {
     if (phoneFromQuery) {
-      setPhone(phoneFromQuery.replace(/\D/g, ""));
+      setPhone(normalizeNigerianPhone(phoneFromQuery));
     }
   }, [phoneFromQuery]);
+
+  const normalizedPreview = normalizeNigerianPhone(phone);
+  const showNormalizedHint =
+    phone.length > 0 &&
+    normalizedPreview !== phone.replace(/\D/g, "") &&
+    normalizedPreview.startsWith("234");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    const normalizedPhone = phone.replace(/\D/g, "");
+    const normalizedPhone = normalizeNigerianPhone(phone);
 
     const result = await signIn("credentials", {
       phone: normalizedPhone,
@@ -123,6 +130,14 @@ function LoginContent() {
                 autoComplete="tel"
               />
             </div>
+            {showNormalizedHint && (
+              <p className="mt-1 text-[11px] text-base-content/60">
+                We&apos;ll sign you in as{" "}
+                <span className="font-semibold text-primary">
+                  {normalizedPreview}
+                </span>
+              </p>
+            )}
           </div>
 
           {/* PIN */}

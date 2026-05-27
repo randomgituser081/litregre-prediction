@@ -13,6 +13,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { normalizeNigerianPhone } from "@/lib/phone";
 
 const BENEFITS = [
   "Create your secure betting PIN in seconds",
@@ -47,6 +48,12 @@ function SignupContent() {
   const strengthLabel = ["", "Weak", "Fair", "Good", "Strong"][pinStrength];
   const strengthColor = ["", "bg-error", "bg-warning", "bg-info", "bg-success"][pinStrength];
 
+  const normalizedPhonePreview = normalizeNigerianPhone(phone);
+  const showPhoneHint =
+    phone.length > 0 &&
+    normalizedPhonePreview !== phone.replace(/\D/g, "") &&
+    normalizedPhonePreview.startsWith("234");
+
   useEffect(() => {
     if (!hasInviteAccess) {
       router.replace("/login?inviteRequired=1");
@@ -61,10 +68,12 @@ function SignupContent() {
     e.preventDefault();
     setError("");
 
-    const normalizedPhone = phone.replace(/\D/g, "");
+    const normalizedPhone = normalizeNigerianPhone(phone);
 
-    if (normalizedPhone.length < 10) {
-      setError("Please enter a valid phone number.");
+    if (!/^234\d{10}$/.test(normalizedPhone)) {
+      setError(
+        "Please enter a valid Nigerian phone number, e.g. 08012345678 or 2348012345678.",
+      );
       return;
     }
 
@@ -190,6 +199,14 @@ function SignupContent() {
                   autoComplete="tel"
                 />
               </div>
+              {showPhoneHint && (
+                <p className="mt-1 text-[11px] text-base-content/60">
+                  We&apos;ll register you as{" "}
+                  <span className="font-semibold text-primary">
+                    {normalizedPhonePreview}
+                  </span>
+                </p>
+              )}
             </div>
 
             {/* PIN */}

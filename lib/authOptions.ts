@@ -1,6 +1,7 @@
 import CredentialsProvider from "next-auth/providers/credentials";
 import type { NextAuthOptions } from "next-auth";
 import { loginUser, extractToken } from "./predictionApi";
+import { normalizeNigerianPhone } from "./phone";
 
 /** Decode a JWT payload without verifying (server has already validated it). */
 function decodeJwtExp(token: string | undefined): number | undefined {
@@ -30,7 +31,7 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.phone || !credentials?.pin) return null;
 
-        const number = credentials.phone.replace(/\D/g, "");
+        const number = normalizeNigerianPhone(credentials.phone);
 
         const { ok, data } = await loginUser({ number, pin: credentials.pin });
         if (!ok) return null;

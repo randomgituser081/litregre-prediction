@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createUser, extractError } from "@/lib/predictionApi";
+import { normalizeNigerianPhone } from "@/lib/phone";
 
 interface RegisterBody {
   phone?: string;
@@ -11,15 +12,19 @@ interface RegisterBody {
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as RegisterBody;
-    const number = (body.phone ?? "").replace(/\D/g, "");
+    const number = normalizeNigerianPhone(body.phone ?? "");
     const pin = body.pin ?? "";
     const confirmPin = body.confirmPin ?? "";
     const agreed = Boolean(body.agreed);
 
     // Client-side mirrors these too, but validate server-side as well
-    if (number.length < 10) {
+    if (!/^234\d{10}$/.test(number)) {
       return NextResponse.json(
-        { ok: false, error: "Invalid phone number." },
+        {
+          ok: false,
+          error:
+            "Invalid phone number. Use a Nigerian number, e.g. 08012345678.",
+        },
         { status: 400 }
       );
     }

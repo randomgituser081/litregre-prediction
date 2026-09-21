@@ -289,7 +289,7 @@ export default function SpecialPredictionCard({ prediction }: Props) {
             <span className="text-[9px] text-base-content/40 uppercase font-semibold flex-shrink-0">
               {isWinnerMarket ? "Winner" : "Tip"}
             </span>
-            <span className="bg-secondary text-white text-[10px] font-bold px-2 py-0.5 rounded-md truncate max-w-[180px] sm:max-w-[240px]">
+            <span className="bg-secondary text-secondary-content text-[10px] font-bold px-2 py-0.5 rounded-md truncate max-w-[180px] sm:max-w-[240px]">
               {tip}
             </span>
           </div>

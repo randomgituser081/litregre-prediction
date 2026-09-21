@@ -411,7 +411,7 @@ export default function HomePage() {
               onClick={() => setActiveTab("special")}
               className={`flex-1 min-w-[6.5rem] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
                 activeTab === "special"
-                  ? "bg-secondary text-white shadow-sm"
+                  ? "bg-secondary text-secondary-content shadow-sm"
                   : "text-base-content/60 hover:text-base-content hover:bg-base-200"
               }`}
             >
@@ -629,7 +629,7 @@ export default function HomePage() {
                           onClick={() => changeSpecialMarket(m.id)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
                             specialMarket === m.id
-                              ? "bg-secondary text-white border-secondary"
+                              ? "bg-secondary text-secondary-content border-secondary"
                               : "bg-base-100 text-base-content/60 border-base-300 hover:border-secondary/50 hover:text-secondary"
                           }`}
                         >
@@ -652,7 +652,7 @@ export default function HomePage() {
                             onClick={() => handleTimeFilter(f.id)}
                             className={`px-2.5 py-1 rounded-md text-[11px] font-bold border transition-colors ${
                               active
-                                ? "bg-secondary text-white border-secondary"
+                                ? "bg-secondary text-secondary-content border-secondary"
                                 : "bg-base-100 text-base-content/55 border-base-300 hover:border-secondary/40"
                             }`}
                           >

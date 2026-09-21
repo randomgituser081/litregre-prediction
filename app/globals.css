@@ -62,7 +62,7 @@ body {
 
 /* ─── Prediction badge colors ──────────────────── */
 .badge-win {
-  @apply badge badge-success text-white text-xs font-semibold;
+  @apply badge text-xs font-semibold bg-success text-[#0A1433] border-success;
 }
 .badge-loss {
   @apply badge badge-error text-white text-xs font-semibold;

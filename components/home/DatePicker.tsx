@@ -53,7 +53,7 @@ export default function DatePicker({ selected, onChange }: Props) {
               onClick={() => onChange(dateStr)}
               className={`flex-shrink-0 flex flex-col items-center px-2.5 py-1.5 rounded-lg min-w-[44px] transition-all duration-150 ${
                 isSelected
-                  ? "bg-primary text-white shadow-sm"
+                  ? "bg-primary text-primary-content shadow-sm"
                   : "hover:bg-base-300"
               }`}
             >
